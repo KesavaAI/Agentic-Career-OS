@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Award, AlertTriangle, CheckCircle2, Play, FileText, 
   HelpCircle, RotateCcw, ChevronDown, ChevronUp, Sparkles, 
-  ArrowRight, X, Volume2, Video 
+  ArrowRight, X, Volume2, Video, StopCircle 
 } from 'lucide-react';
 
 interface PostInterviewDiagnosticViewProps {
@@ -16,18 +16,19 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
   onPracticeAgain,
   onDone
 }) => {
-  const [activeTabQ, setActiveTabQ] = useState(6);
+  const [activeTabQ, setActiveTabQ] = useState(1);
   const [showWeakModal, setShowWeakModal] = useState(false);
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  const activeQuestion = report?.question_breakdowns?.find((q: any) => q.question_number === activeTabQ) || 
-    report?.question_breakdowns?.[0] || {
-      question_number: 6,
-      question: "Tell me about your most challenging project.",
-      candidate_answer: "In our team project, we had to analyze customer churn. I used SQL and Python to extract the database tables and built some dashboards. It helped the team see which users were leaving.",
-      score: 68,
-      why_was_this_weak: "Your answer jumped immediately into tooling without framing the business stakes (Situation/Task). You described passive actions ('built some dashboards') instead of proactive engineering decisions, and completely omitted the final metric outcome (e.g., 'reduced churn by 14% saving $120k ARR').",
+  const questionsList = report?.question_breakdowns || [];
+  const activeQuestion = questionsList.find((q: any) => q.question_number === activeTabQ) || 
+    questionsList[0] || {
+      question_number: 1,
+      question: "Tell me about yourself and walk me through your technical background.",
+      candidate_answer: "(No spoken answer recorded)",
+      score: 45,
+      why_was_this_weak: "No verbal response was detected by the microphone. Click 'Practice Again' and speak your response into the microphone or type in the transcription box.",
       ideal_star_rewrite: {
         situation: "At my previous company, quarterly subscriber churn unexpectedly increased by 18%, risking $450k in annual recurring revenue.",
         task: "I was tasked with identifying the leading indicators of user drop-off across 500,000 active customer records within 2 weeks.",
@@ -35,6 +36,8 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
         result: "Product leadership deployed targeted checkout optimizations, decreasing drop-offs by 24% and recovering $180k in ARR in Q3."
       }
     };
+
+  const hasNoSpeech = report?.rating_tier === "No Speech Recorded" || report?.overall_score <= 50;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -55,12 +58,14 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
         <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
           <div className="text-center">
             <p className="text-[10px] font-bold text-slate-500 uppercase">Overall Score</p>
-            <p className="text-3xl font-black text-emerald-400 mt-0.5">{report?.overall_score || 76}/100</p>
+            <p className={`text-3xl font-black mt-0.5 ${hasNoSpeech ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {report?.overall_score || 76}/100
+            </p>
           </div>
           <div className="h-10 w-px bg-slate-800" />
           <div className="text-left text-xs">
-            <p className="font-bold text-slate-200">Competitive Candidate</p>
-            <p className="text-[11px] text-emerald-400">Top 15% Candidate Pool</p>
+            <p className="font-bold text-slate-200">{report?.rating_tier || 'Competitive Candidate'}</p>
+            <p className="text-[11px] text-slate-400">{hasNoSpeech ? 'Practice with Mic Active' : 'Top 15% Candidate Pool'}</p>
           </div>
         </div>
       </div>
@@ -108,8 +113,8 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
 
       {/* Question Selector Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        {(report?.question_breakdowns || [1, 2, 3, 4, 5, 6]).map((q: any, i: number) => {
-          const qNum = typeof q === 'number' ? q : q.question_number;
+        {questionsList.map((q: any, i: number) => {
+          const qNum = q.question_number || (i + 1);
           const isActive = activeTabQ === qNum;
           return (
             <button
@@ -132,15 +137,23 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
-              Question {activeQuestion.question_number}: Flagship Project Defense
+              Question {activeQuestion.question_number}
             </span>
             <span className="text-xs font-bold text-amber-400">
-              Score: {activeQuestion.score || 68}/100 (Needs Improvement)
+              Score: {activeQuestion.score || 68}/100
             </span>
           </div>
           <h3 className="text-lg font-bold text-slate-100">
             "{activeQuestion.question}"
           </h3>
+        </div>
+
+        {/* Candidate Recorded Transcript Box */}
+        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-1">
+          <p className="font-bold text-slate-400 uppercase text-[10px]">Your Answer:</p>
+          <p className="italic">
+            {activeQuestion.candidate_answer || "(No speech recorded for this question)"}
+          </p>
         </div>
 
         {/* 4 Interactive Action Buttons */}
@@ -192,8 +205,8 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
             <div className="flex items-center gap-3">
               <Volume2 className="w-5 h-5 text-emerald-400 animate-pulse" />
               <div>
-                <p className="font-bold text-slate-200">Replaying Candidate Answer (0:45s)</p>
-                <p className="text-[11px] text-slate-400">"In our team project, we had to analyze customer churn..."</p>
+                <p className="font-bold text-slate-200">Replaying Candidate Answer ({activeQuestion.duration_seconds || 30}s)</p>
+                <p className="text-[11px] text-slate-400">"{activeQuestion.candidate_answer}"</p>
               </div>
             </div>
             <button 
@@ -210,7 +223,7 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
       <div className="flex items-center justify-end gap-3 pt-4">
         <button
           onClick={onDone}
-          className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-bold border border-slate-800"
+          className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-bold border border-slate-800 cursor-pointer"
         >
           Return to Dashboard
         </button>
@@ -304,8 +317,8 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-400 pt-2">
-              <span>Duration: {activeQuestion.duration_seconds || 65}s</span>
-              <span className="text-amber-400 font-bold">14 filler words detected</span>
+              <span>Duration: {activeQuestion.duration_seconds || 30}s</span>
+              <span className="text-amber-400 font-bold">{activeQuestion.filler_count || 0} filler words detected</span>
             </div>
           </div>
         </div>

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Play, Video, Mic, Award, CheckCircle2, 
   AlertTriangle, Clock, Volume2, ArrowRight, ShieldAlert,
-  Flame, BarChart3, RotateCcw, Target, HelpCircle, FileText 
+  Flame, BarChart3, RotateCcw, Target, HelpCircle, FileText,
+  Headphones, MessageSquare, UserCheck 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
@@ -14,6 +15,9 @@ export const MockInterviewView: React.FC = () => {
   const [viewState, setViewState] = useState<'readiness' | 'video_arena' | 'diagnostic'>('readiness');
   const [targetCompany, setTargetCompany] = useState('Acme');
   const [targetRole, setTargetRole] = useState(user?.target_role || 'Data Analyst');
+  const [selectedMode, setSelectedMode] = useState<'video' | 'voice' | 'text'>('video');
+  const [selectedGender, setSelectedGender] = useState<'female' | 'male'>('female');
+
   const [readinessData, setReadinessData] = useState<any>(null);
   const [evaluationReport, setEvaluationReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -88,12 +92,14 @@ export const MockInterviewView: React.FC = () => {
     }
   };
 
-  // 1. Video Arena View
+  // 1. Video / Voice Arena View
   if (viewState === 'video_arena') {
     return (
       <VideoInterviewArena
         role={targetRole}
         company={targetCompany}
+        initialMode={selectedMode}
+        initialInterviewerGender={selectedGender}
         onFinishSession={handleFinishVideoSession}
         onCancel={() => setViewState('readiness')}
       />
@@ -129,8 +135,8 @@ export const MockInterviewView: React.FC = () => {
             <Video className="w-5 h-5" />
           </span>
           <div>
-            <h3 className="font-extrabold text-sm text-slate-100">AI Video Mock Interview Simulator</h3>
-            <p className="text-xs text-slate-400">Live camera, audio visualizer, real-time filler word audit & STAR coaching</p>
+            <h3 className="font-extrabold text-sm text-slate-100">AI Mock Interview Simulator</h3>
+            <p className="text-xs text-slate-400">Live camera, audio visualizer, real-time filler word audit & voice synthesis</p>
           </div>
         </div>
 
@@ -228,16 +234,97 @@ export const MockInterviewView: React.FC = () => {
           </div>
         </div>
 
+        {/* ========================================================================= */}
+        {/* 🎙️ PRE-SESSION MODE & INTERVIEWER VOICE SELECTOR */}
+        {/* ========================================================================= */}
+        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 max-w-md mx-auto space-y-4 text-left">
+          {/* Mode Selector */}
+          <div>
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+              Select Practice Format:
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => setSelectedMode('video')}
+                className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                  selectedMode === 'video' 
+                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' 
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Video className="w-4 h-4" />
+                <span className="text-xs font-bold">🎥 Video</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedMode('voice')}
+                className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                  selectedMode === 'voice' 
+                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' 
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Headphones className="w-4 h-4" />
+                <span className="text-xs font-bold">🎙️ Voice-Only</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedMode('text')}
+                className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                  selectedMode === 'text' 
+                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' 
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="text-xs font-bold">💬 Text</span>
+              </button>
+            </div>
+          </div>
+
+          {/* AI Voice Persona Selector */}
+          <div>
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+              Select AI Interviewer Voice:
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setSelectedGender('female')}
+                className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                  selectedGender === 'female' 
+                    ? 'bg-indigo-600/30 border-indigo-500 text-indigo-300' 
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>👩‍💼 Sarah (Female)</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedGender('male')}
+                className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                  selectedGender === 'male' 
+                    ? 'bg-blue-600/30 border-blue-500 text-blue-300' 
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>👨‍💼 David (Male)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* PRIMARY ACTION BUTTON */}
-        <div className="pt-4">
+        <div className="pt-2">
           <button
             onClick={() => setViewState('video_arena')}
             className="px-10 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm tracking-wide uppercase shadow-2xl shadow-emerald-500/30 flex items-center gap-3 mx-auto transition-transform hover:scale-105 cursor-pointer"
           >
-            <Video className="w-5 h-5 fill-slate-950" />
-            <span>[ START VIDEO INTERVIEW ]</span>
+            {selectedMode === 'video' ? <Video className="w-5 h-5 fill-slate-950" /> : <Headphones className="w-5 h-5" />}
+            <span>[ START {selectedMode === 'video' ? 'VIDEO' : selectedMode === 'voice' ? 'VOICE' : 'SIMULATION'} INTERVIEW ]</span>
           </button>
-          <p className="text-[11px] text-slate-500 mt-2">Requires camera & mic permission • 6 adaptive questions</p>
+          <p className="text-[11px] text-slate-500 mt-2">
+            Interviewer speaks aloud • Can stop and evaluate at any time
+          </p>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Award, AlertTriangle, CheckCircle2, Play, FileText, 
   HelpCircle, RotateCcw, ChevronDown, ChevronUp, Sparkles, 
-  ArrowRight, X, Volume2, Video, StopCircle 
+  ArrowRight, X, Volume2, Video, StopCircle, User, Zap, Clock, Target 
 } from 'lucide-react';
 
 interface PostInterviewDiagnosticViewProps {
@@ -16,72 +16,125 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
   onPracticeAgain,
   onDone
 }) => {
-  const [activeTabQ, setActiveTabQ] = useState(1);
+  const [activeTabTurn, setActiveTabTurn] = useState(1);
   const [showWeakModal, setShowWeakModal] = useState(false);
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  const questionsList = report?.question_breakdowns || [];
-  const activeQuestion = questionsList.find((q: any) => q.question_number === activeTabQ) || 
-    questionsList[0] || {
-      question_number: 1,
-      question: "Tell me about yourself and walk me through your technical background.",
+  const pillars = report?.mercor_pillars || {
+    ownership_score: 82,
+    technical_depth_score: 80,
+    compression_score: 85,
+    quantified_impact_score: 75
+  };
+
+  const turnsList = report?.turn_breakdowns || report?.question_breakdowns || [];
+  const activeTurn = turnsList.find((t: any) => (t.turn_number || t.question_number) === activeTabTurn) || 
+    turnsList[0] || {
+      turn_number: 1,
+      question: "Tell me about a challenging technical project you owned end-to-end. Walk me through the architecture and the hardest technical decision you made.",
       candidate_answer: "(No spoken answer recorded)",
-      score: 45,
-      why_was_this_weak: "No verbal response was detected by the microphone. Click 'Practice Again' and speak your response into the microphone or type in the transcription box.",
+      telemetry: {
+        ownership_score: 80,
+        depth_label: "Layer 2: Technical Trade-Offs",
+        compression_rating: "Optimal (<90s)",
+        quantified_metrics_count: 1
+      },
+      why_was_this_weak: "Your answer focused heavily on high-level tooling. To rank in the top 5% of Mercor candidates, articulate the specific trade-offs (e.g. why Redis over Memcached) and quantify your impact with latency numbers.",
       ideal_star_rewrite: {
-        situation: "At my previous company, quarterly subscriber churn unexpectedly increased by 18%, risking $450k in annual recurring revenue.",
-        task: "I was tasked with identifying the leading indicators of user drop-off across 500,000 active customer records within 2 weeks.",
-        action: "I engineered automated SQL cohort analysis queries with window functions, isolated the churn trigger to a mobile checkout latency bottleneck, and built an automated churn-risk alert pipeline.",
-        result: "Product leadership deployed targeted checkout optimizations, decreasing drop-offs by 24% and recovering $180k in ARR in Q3."
+        situation: "At my previous company, our real-time notification service faced cascading bottlenecks during traffic spikes.",
+        task: "I was tasked with redesigning the ingestion pipeline to support 50,000 concurrent websocket connections.",
+        action: "I implemented a Redis pub/sub cluster with connection pooling and automated backpressure buffers.",
+        result: "Reduced P99 latency from 450ms to 12ms and eliminated 100% of connection timeout drops."
       }
     };
-
-  const hasNoSpeech = report?.rating_tier === "No Speech Recorded" || report?.overall_score <= 50;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Header Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-purple-950/40 to-slate-900 border border-purple-500/30 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] font-extrabold px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
-            Post-Session Forensic Diagnostic
+          <span className="text-[10px] font-black px-2.5 py-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider">
+            Mercor AI Autonomous Interview Scorecard
           </span>
           <h2 className="text-2xl font-black text-slate-100 mt-2">
-            {report?.company?.toUpperCase() || 'ACME'} — {report?.target_role?.toUpperCase() || 'DATA ANALYST'}
+            {report?.company?.toUpperCase() || 'ACME'} — {report?.target_role?.toUpperCase() || 'FULL STACK ENGINEER'}
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Full AI behavioral, technical depth, and STAR structural audit.
+            4-Pillar Evaluation: Ownership, Technical Depth, Compression & Quantified Impact
           </p>
         </div>
 
-        <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-4 bg-slate-950/70 p-4 rounded-xl border border-slate-800">
           <div className="text-center">
-            <p className="text-[10px] font-bold text-slate-500 uppercase">Overall Score</p>
-            <p className={`text-3xl font-black mt-0.5 ${hasNoSpeech ? 'text-amber-400' : 'text-emerald-400'}`}>
-              {report?.overall_score || 76}/100
+            <p className="text-[10px] font-bold text-slate-500 uppercase">Mercor Score</p>
+            <p className="text-3xl font-black text-emerald-400 mt-0.5">
+              {report?.overall_score || 78}/100
             </p>
           </div>
           <div className="h-10 w-px bg-slate-800" />
           <div className="text-left text-xs">
-            <p className="font-bold text-slate-200">{report?.rating_tier || 'Competitive Candidate'}</p>
-            <p className="text-[11px] text-slate-400">{hasNoSpeech ? 'Practice with Mic Active' : 'Top 15% Candidate Pool'}</p>
+            <p className="font-bold text-slate-200">{report?.rating_tier || 'Top 10% Mercor Pool'}</p>
+            <p className="text-[11px] text-emerald-400">High-Probability Placement</p>
           </div>
         </div>
       </div>
 
-      {/* Strengths & Critical Warnings Grid */}
+      {/* 🔬 MERCOR 4-PILLAR RUBRIC CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {/* 1. Ownership */}
+        <div className="p-4 rounded-xl bg-slate-900 border border-indigo-500/30 shadow-md space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-400 uppercase">1. Individual Ownership</span>
+            <User className="w-4 h-4 text-indigo-400" />
+          </div>
+          <p className="text-2xl font-black text-indigo-300">{pillars.ownership_score}%</p>
+          <p className="text-[11px] text-slate-400">'I' vs 'We' Pronoun Density</p>
+        </div>
+
+        {/* 2. Technical Depth */}
+        <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/30 shadow-md space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-400 uppercase">2. Technical Depth</span>
+            <Zap className="w-4 h-4 text-amber-400" />
+          </div>
+          <p className="text-2xl font-black text-amber-300">{pillars.technical_depth_score}%</p>
+          <p className="text-[11px] text-slate-400">3-Layers Deep (Scale/Trade-offs)</p>
+        </div>
+
+        {/* 3. Compression */}
+        <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/30 shadow-md space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-400 uppercase">3. Compression</span>
+            <Clock className="w-4 h-4 text-emerald-400" />
+          </div>
+          <p className="text-2xl font-black text-emerald-300">{pillars.compression_score}%</p>
+          <p className="text-[11px] text-slate-400">Fluff-Free (<90s Answers)</p>
+        </div>
+
+        {/* 4. Quantified Impact */}
+        <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/30 shadow-md space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-400 uppercase">4. Quantified Impact</span>
+            <Target className="w-4 h-4 text-purple-400" />
+          </div>
+          <p className="text-2xl font-black text-purple-300">{pillars.quantified_impact_score}%</p>
+          <p className="text-[11px] text-slate-400">Before & After Metrics (%, ms, $)</p>
+        </div>
+      </div>
+
+      {/* Strengths & Critical Warnings */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Strengths */}
         <div className="p-5 rounded-xl bg-slate-900 border border-emerald-500/30 shadow-md space-y-3">
           <div className="flex items-center gap-2 text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
-            <h3 className="text-xs font-extrabold uppercase tracking-wider">Key Strengths Identified</h3>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider">Identified Mercor Strengths</h3>
           </div>
           <ul className="space-y-2 text-xs text-slate-200 font-medium">
             {(report?.strengths || [
-              "✓ Strong SQL explanation",
-              "✓ Good project knowledge"
+              "✓ Exceptional individual ownership ('I' phrasing vs 'We')",
+              "✓ Strong Layer-3 Production Depth (concurrency & trade-offs)"
             ]).map((s: string, i: number) => (
               <li key={i} className="flex items-start gap-2">
                 <span className="text-emerald-400 font-bold">{s}</span>
@@ -94,14 +147,12 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
         <div className="p-5 rounded-xl bg-slate-900 border border-amber-500/30 shadow-md space-y-3">
           <div className="flex items-center gap-2 text-amber-400">
             <AlertTriangle className="w-4 h-4" />
-            <h3 className="text-xs font-extrabold uppercase tracking-wider">Critical Areas to Fix (Warnings)</h3>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider">Mercor Areas to Optimize</h3>
           </div>
           <ul className="space-y-2 text-xs text-slate-200 font-medium">
             {(report?.warnings || [
-              "⚠ Answers too long",
-              "⚠ Weak business impact",
-              "⚠ 14 filler words/minute",
-              "⚠ STAR structure missing"
+              "⚠ Quantify metrics more aggressively with before-and-after numbers",
+              "⚠ Address distributed failure modes in 10x traffic spikes"
             ]).map((w: string, i: number) => (
               <li key={i} className="flex items-start gap-2">
                 <span className="text-amber-300 font-bold">{w}</span>
@@ -111,54 +162,50 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
         </div>
       </div>
 
-      {/* Question Selector Tabs */}
+      {/* Turn Selector Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        {questionsList.map((q: any, i: number) => {
-          const qNum = q.question_number || (i + 1);
-          const isActive = activeTabQ === qNum;
+        {turnsList.map((t: any, i: number) => {
+          const tNum = t.turn_number || t.question_number || (i + 1);
+          const isActive = activeTabTurn === tNum;
           return (
             <button
-              key={qNum}
-              onClick={() => setActiveTabQ(qNum)}
+              key={tNum}
+              onClick={() => setActiveTabTurn(tNum)}
               className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
                   : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
               }`}
             >
-              Question {qNum} {qNum === 6 ? '⚠️ Focus' : ''}
+              Adaptive Turn {tNum}
             </button>
           );
         })}
       </div>
 
-      {/* Question Diagnostic Card */}
+      {/* Turn Inspector Card */}
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-6">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
-              Question {activeQuestion.question_number}
-            </span>
-            <span className="text-xs font-bold text-amber-400">
-              Score: {activeQuestion.score || 68}/100
+            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase">
+              Adaptive Turn {activeTurn.turn_number || activeTurn.question_number || 1} • {activeTurn.phase || 'Technical Cross-Examination'}
             </span>
           </div>
           <h3 className="text-lg font-bold text-slate-100">
-            "{activeQuestion.question}"
+            "{activeTurn.question}"
           </h3>
         </div>
 
         {/* Candidate Recorded Transcript Box */}
         <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-1">
-          <p className="font-bold text-slate-400 uppercase text-[10px]">Your Answer:</p>
+          <p className="font-bold text-slate-400 uppercase text-[10px]">Your Spoken Response:</p>
           <p className="italic">
-            {activeQuestion.candidate_answer || "(No speech recorded for this question)"}
+            {activeTurn.candidate_answer || "(No speech recorded for this turn)"}
           </p>
         </div>
 
-        {/* 4 Interactive Action Buttons */}
+        {/* 4 Action Buttons */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-          {/* 1. Watch / Listen Answer */}
           <button
             onClick={() => setIsPlayingAudio(!isPlayingAudio)}
             className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
@@ -168,10 +215,9 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
             }`}
           >
             <Play className={`w-4 h-4 ${isPlayingAudio ? 'fill-emerald-400 text-emerald-400' : ''}`} />
-            <span>{isPlayingAudio ? 'Playing Answer...' : '▶ WATCH YOUR ANSWER'}</span>
+            <span>{isPlayingAudio ? 'Playing Audio...' : '▶ WATCH / LISTEN'}</span>
           </button>
 
-          {/* 2. View Transcript */}
           <button
             onClick={() => setShowTranscriptModal(true)}
             className="p-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer"
@@ -180,7 +226,6 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
             <span>View Transcript</span>
           </button>
 
-          {/* 3. Why was this weak? */}
           <button
             onClick={() => setShowWeakModal(true)}
             className="p-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 flex items-center justify-center gap-2 text-xs font-extrabold transition-all cursor-pointer shadow-lg shadow-amber-500/10"
@@ -189,32 +234,25 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
             <span>Why was this weak?</span>
           </button>
 
-          {/* 4. Practice Again */}
           <button
-            onClick={() => onPracticeAgain(activeQuestion.question_number)}
-            className="p-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center gap-2 text-xs font-black transition-all cursor-pointer shadow-lg shadow-emerald-500/20"
+            onClick={() => onPracticeAgain(activeTurn.turn_number || 1)}
+            className="p-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center gap-2 text-xs font-black transition-all cursor-pointer shadow-lg shadow-purple-600/20"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Practice Again</span>
+            <span>Practice Turn Again</span>
           </button>
         </div>
 
-        {/* Inline Audio Player Preview */}
         {isPlayingAudio && (
           <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/30 flex items-center justify-between text-xs">
             <div className="flex items-center gap-3">
               <Volume2 className="w-5 h-5 text-emerald-400 animate-pulse" />
               <div>
-                <p className="font-bold text-slate-200">Replaying Candidate Answer ({activeQuestion.duration_seconds || 30}s)</p>
-                <p className="text-[11px] text-slate-400">"{activeQuestion.candidate_answer}"</p>
+                <p className="font-bold text-slate-200">Replaying Turn ({activeTurn.duration_seconds || 30}s)</p>
+                <p className="text-[11px] text-slate-400">"{activeTurn.candidate_answer}"</p>
               </div>
             </div>
-            <button 
-              onClick={() => setIsPlayingAudio(false)} 
-              className="text-[11px] text-slate-400 hover:text-slate-200 underline"
-            >
-              Stop
-            </button>
+            <button onClick={() => setIsPlayingAudio(false)} className="text-[11px] text-slate-400 hover:text-slate-200 underline">Stop</button>
           </div>
         )}
       </div>
@@ -229,51 +267,44 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
         </button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* ⚠️ MODAL: 'WHY WAS THIS WEAK?' & STAR REWRITE */}
-      {/* ========================================================================= */}
+      {/* MODAL: WHY WAS THIS WEAK */}
       {showWeakModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative">
-            <button
-              onClick={() => setShowWeakModal(false)}
-              className="absolute top-4 right-4 text-slate-500 hover:text-slate-200"
-            >
+            <button onClick={() => setShowWeakModal(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-200">
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center gap-2 text-amber-400">
               <AlertTriangle className="w-5 h-5" />
-              <h3 className="text-base font-extrabold">Forensic Diagnostic: Why was this answer weak?</h3>
+              <h3 className="text-base font-extrabold">Mercor Forensic Critique</h3>
             </div>
 
-            {/* Critique Breakdown */}
             <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 leading-relaxed">
-              <p className="font-bold text-amber-300 mb-1">AI Evaluator Critique:</p>
-              {activeQuestion.why_was_this_weak}
+              <p className="font-bold text-amber-300 mb-1">Mercor Evaluator Analysis:</p>
+              {activeTurn.why_was_this_weak || "Ensure you articulate specific trade-offs and quantify before-and-after results."}
             </div>
 
-            {/* Ideal Google STAR Rewrite */}
             <div className="space-y-2">
               <h4 className="text-xs font-extrabold uppercase text-emerald-400 tracking-wider">
-                Ideal Google STAR Rewrite (Grounded in Your Project):
+                Ideal Top-1% Mercor Candidate Response:
               </h4>
               <div className="space-y-2 text-xs">
                 <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                   <span className="font-bold text-indigo-400">Situation: </span>
-                  <span className="text-slate-300">{activeQuestion.ideal_star_rewrite?.situation}</span>
+                  <span className="text-slate-300">{activeTurn.ideal_star_rewrite?.situation}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                   <span className="font-bold text-blue-400">Task: </span>
-                  <span className="text-slate-300">{activeQuestion.ideal_star_rewrite?.task}</span>
+                  <span className="text-slate-300">{activeTurn.ideal_star_rewrite?.task}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                   <span className="font-bold text-amber-400">Action: </span>
-                  <span className="text-slate-300">{activeQuestion.ideal_star_rewrite?.action}</span>
+                  <span className="text-slate-300">{activeTurn.ideal_star_rewrite?.action}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-slate-950 border border-emerald-500/40">
                   <span className="font-bold text-emerald-400">Result: </span>
-                  <span className="text-slate-200 font-semibold">{activeQuestion.ideal_star_rewrite?.result}</span>
+                  <span className="text-slate-200 font-semibold">{activeTurn.ideal_star_rewrite?.result}</span>
                 </div>
               </div>
             </div>
@@ -282,43 +313,33 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
               <button
                 onClick={() => {
                   setShowWeakModal(false);
-                  onPracticeAgain(activeQuestion.question_number);
+                  onPracticeAgain(activeTurn.turn_number || 1);
                 }}
-                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs flex items-center gap-2 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Practice Question {activeQuestion.question_number} Again</span>
+                <span>Practice Turn {activeTurn.turn_number || 1} Again</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 📄 MODAL: FULL WORD-BY-WORD TRANSCRIPT */}
-      {/* ========================================================================= */}
+      {/* MODAL: TRANSCRIPT */}
       {showTranscriptModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative">
-            <button
-              onClick={() => setShowTranscriptModal(false)}
-              className="absolute top-4 right-4 text-slate-500 hover:text-slate-200"
-            >
+            <button onClick={() => setShowTranscriptModal(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-200">
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center gap-2 text-blue-400">
               <FileText className="w-5 h-5" />
-              <h3 className="text-base font-extrabold">Word-by-Word Answer Transcript</h3>
+              <h3 className="text-base font-extrabold">Turn Word-by-Word Transcript</h3>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 leading-relaxed font-sans max-h-60 overflow-y-auto">
-              "{activeQuestion.candidate_answer}"
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-slate-400 pt-2">
-              <span>Duration: {activeQuestion.duration_seconds || 30}s</span>
-              <span className="text-amber-400 font-bold">{activeQuestion.filler_count || 0} filler words detected</span>
+              "{activeTurn.candidate_answer}"
             </div>
           </div>
         </div>

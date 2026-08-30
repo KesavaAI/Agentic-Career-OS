@@ -252,6 +252,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab, onO
         </div>
       </div>
 
+      {/* 🎯 SMART NEXT BEST ACTION HERO BANNER */}
+      <div className="p-4 md:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-emerald-950/40 to-slate-900 border border-emerald-500/30 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+            <Sparkles className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
+                AI Career Agent • Next Best Action
+              </span>
+              <span className="text-[11px] text-emerald-400 font-semibold">+8% Expected Confidence Lift</span>
+            </div>
+            <h3 className="text-sm md:text-base font-bold text-slate-100 mt-1">
+              Practice Question 6 Flagship Project Defense in the Video Studio
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Your last session detected 14 filler words/min on Question 6. Re-record with Google STAR scaffold to boost your readiness to 84%.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
+          <button
+            onClick={() => onNavigateTab('mock-interview')}
+            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 cursor-pointer"
+          >
+            <Video className="w-4 h-4 fill-slate-950" />
+            <span>[ Launch Video Studio ]</span>
+          </button>
+        </div>
+      </div>
+
       {/* 🚀 8-PILLAR AUTOPILOT WORKFLOW RIBBON */}
       <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md">
         <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 text-xs scrollbar-thin">

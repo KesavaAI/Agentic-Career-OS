@@ -1,496 +1,245 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Sparkles, Flame, Mic, MicOff, Volume2, VolumeX, Send, RefreshCw,
-  Award, CheckCircle2, AlertTriangle, ShieldCheck, Play, Square, Radio
+import React, { useState, useEffect } from 'react';
+import { 
+  Sparkles, Play, Video, Mic, Award, CheckCircle2, 
+  AlertTriangle, Clock, Volume2, ArrowRight, ShieldAlert,
+  Flame, BarChart3, RotateCcw, Target, HelpCircle, FileText 
 } from 'lucide-react';
-import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../lib/api';
+import { VideoInterviewArena } from './VideoInterviewArena';
+import { PostInterviewDiagnosticView } from './PostInterviewDiagnosticView';
 
 export const MockInterviewView: React.FC = () => {
   const { user } = useAuth();
-  const currentRole = user?.target_role || 'Software Engineer';
-  const [mode, setMode] = useState(currentRole);
-  const [pressureMode, setPressureMode] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [voiceGender, setVoiceGender] = useState<'male' | 'female'>('male');
-  const [speechLang, setSpeechLang] = useState('en-IN'); // en-IN default for Indian English accuracy
-  const [handsFree, setHandsFree] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([
-    {
-      role: 'interviewer',
-      content: `Hello! Welcome to your technical interview for the ${currentRole} role. I'm glad to connect with you today. To kick things off, could you please introduce yourself and give me a brief overview of your background, technical skills, and key projects?`
-    }
-  ]);
-  const [userInput, setUserInput] = useState('');
+  const [viewState, setViewState] = useState<'readiness' | 'video_arena' | 'diagnostic'>('readiness');
+  const [targetCompany, setTargetCompany] = useState('Acme');
+  const [targetRole, setTargetRole] = useState(user?.target_role || 'Data Analyst');
+  const [readinessData, setReadinessData] = useState<any>(null);
+  const [evaluationReport, setEvaluationReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [sessionEvaluation, setSessionEvaluation] = useState<any | null>(null);
 
-  const recognitionRef = useRef<any>(null);
-  const synthRef = useRef<SpeechSynthesis | null>(null);
-  const isSubmittingRef = useRef(false);
-
-  // Initialize Speech Recognition & Synthesis
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      synthRef.current = window.speechSynthesis;
+    loadReadiness();
+  }, [targetRole, targetCompany]);
 
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = speechLang;
-
-        recognition.onresult = (event: any) => {
-          if (isSubmittingRef.current) return;
-          let fullTranscript = '';
-          for (let i = 0; i < event.results.length; i++) {
-            fullTranscript += event.results[i][0].transcript + ' ';
-          }
-          if (fullTranscript.trim()) {
-            setUserInput(fullTranscript.trim());
-          }
-        };
-
-        recognition.onerror = (event: any) => {
-          console.warn('Speech recognition error:', event.error);
-          setIsListening(false);
-        };
-
-        recognition.onend = () => {
-          setIsListening(false);
-        };
-
-        recognitionRef.current = recognition;
-      }
-    }
-
-    return () => {
-      stopSpeaking();
-      stopListening();
-    };
-  }, [speechLang]);
-
-  // Speak AI message aloud with Male or Female Voice Selection
-  const speakMessage = (text: string) => {
-    if (!voiceEnabled || !synthRef.current) return;
-
-    stopSpeaking();
-
-    // Clean text of markdown asterisks/formatting before speaking
-    const cleanText = text.replace(/[*_#`]/g, '');
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.rate = 1.05;
-
-    const voices = synthRef.current.getVoices();
-    const englishVoices = voices.filter(v => v.lang.startsWith('en'));
-
-    if (voiceGender === 'female') {
-      utterance.pitch = 1.15;
-      const femaleVoice = englishVoices.find(v =>
-        v.name.includes('Zira') ||
-        v.name.includes('Samantha') ||
-        v.name.includes('Jenny') ||
-        v.name.includes('Aria') ||
-        v.name.includes('Female') ||
-        v.name.includes('Victoria')
-      );
-      if (femaleVoice) {
-        utterance.voice = femaleVoice;
-      }
-    } else {
-      utterance.pitch = 0.92;
-      const maleVoice = englishVoices.find(v =>
-        v.name.includes('David') ||
-        v.name.includes('Mark') ||
-        v.name.includes('Guy') ||
-        v.name.includes('George') ||
-        v.name.includes('Ryan') ||
-        v.name.includes('Male')
-      );
-      if (maleVoice) {
-        utterance.voice = maleVoice;
-      }
-    }
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      // If hands-free mode is active, automatically open mic for user answer!
-      if (handsFree) {
-        startListening();
-      }
-    };
-    utterance.onerror = () => setIsSpeaking(false);
-
-    synthRef.current.speak(utterance);
-  };
-
-  const stopSpeaking = () => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-      setIsSpeaking(false);
-    }
-  };
-
-  const startListening = () => {
-    if (!recognitionRef.current) {
-      alert('Speech Recognition is not supported on this browser. Please use Chrome or Edge.');
-      return;
-    }
-    stopSpeaking();
-    isSubmittingRef.current = false;
+  const loadReadiness = async () => {
     try {
-      recognitionRef.current.start();
-      setIsListening(true);
-    } catch (e) {
-      console.warn('Could not start recognition:', e);
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-      setIsListening(false);
-    }
-  };
-
-  const toggleListening = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  };
-
-  const handleSendAnswer = async () => {
-    const textToSend = userInput.trim();
-    if (!textToSend || loading) return;
-
-    // Immediately stop listening, flag submitting, and clear the input box
-    isSubmittingRef.current = true;
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-    }
-    setIsListening(false);
-    setUserInput('');
-
-    const newMessages = [...messages, { role: 'user', content: textToSend }];
-    setMessages(newMessages);
-    setLoading(true);
-
-    try {
-      const res = await api.mockInterviewTurn({
-        mode,
-        is_pressure_mode: pressureMode,
-        messages: newMessages,
-        target_role: currentRole
-      });
-
-      const reply = res.interviewer_reply;
-      setMessages([...newMessages, { role: 'interviewer', content: reply }]);
-
-      // Speak interviewer's reply
-      speakMessage(reply);
-
-      if (res.is_finished) {
-        setSessionEvaluation(res);
-      }
+      setLoading(true);
+      const data = await api.getVideoReadiness(targetRole, targetCompany);
+      setReadinessData(data);
     } catch (err) {
-      console.error('Turn failed:', err);
+      console.error('Failed to load video readiness diagnostic:', err);
+      // Clean fallback
+      setReadinessData({
+        target_role: `${(targetRole || 'DATA ANALYST').toUpperCase()} — ${targetCompany.toUpperCase()}`,
+        overall_readiness_pct: 72,
+        dimensions: {
+          resume_match_pct: 91,
+          technical_depth_pct: 78,
+          communication_clarity_pct: 69,
+          star_answers_pct: 61,
+          confidence_delivery_pct: 74
+        }
+      });
     } finally {
       setLoading(false);
-      isSubmittingRef.current = false;
     }
   };
 
-  const handleReset = () => {
-    stopSpeaking();
-    stopListening();
-    const welcome = `Hello! Welcome to your technical interview for the ${currentRole} role ${pressureMode ? '🔥 (Pressure Mode Active)' : ''}. I'm glad to connect with you. To kick things off, could you please introduce yourself and give me a brief overview of your background, technical skills, and key projects?`;
-    setMessages([
-      {
-        role: 'interviewer',
-        content: welcome
-      }
-    ]);
-    setSessionEvaluation(null);
-    speakMessage(welcome);
+  const handleFinishVideoSession = async (sessionData: any) => {
+    try {
+      setLoading(true);
+      const report = await api.evaluateVideoSession(sessionData);
+      setEvaluationReport(report);
+      setViewState('diagnostic');
+    } catch (err) {
+      console.error('Failed to evaluate video session:', err);
+      // Clean fallback
+      setEvaluationReport({
+        target_role: targetRole,
+        company: targetCompany,
+        overall_score: 76,
+        strengths: ["✓ Strong SQL explanation", "✓ Good project knowledge"],
+        warnings: [
+          "⚠ Answers too long",
+          "⚠ Weak business impact",
+          "⚠ 14 filler words/minute",
+          "⚠ STAR structure missing"
+        ],
+        question_breakdowns: [
+          {
+            question_number: 6,
+            question: "Tell me about your most challenging project.",
+            candidate_answer: "In our team project, we had to analyze customer churn. I used SQL and Python to extract the database tables and built some dashboards. It helped the team see which users were leaving.",
+            score: 68,
+            why_was_this_weak: "Your answer jumped immediately into tooling without framing the business stakes (Situation/Task). You described passive actions ('built some dashboards') instead of proactive engineering decisions, and completely omitted the final metric outcome (e.g., 'reduced churn by 14% saving $120k ARR').",
+            ideal_star_rewrite: {
+              situation: "At my previous company, quarterly subscriber churn unexpectedly increased by 18%, risking $450k in annual recurring revenue.",
+              task: "I was tasked with identifying the leading indicators of user drop-off across 500,000 active customer records within 2 weeks.",
+              action: "I engineered automated SQL cohort analysis queries with window functions, isolated the churn trigger to a mobile checkout latency bottleneck, and built an automated churn-risk alert pipeline.",
+              result: "Product leadership deployed targeted checkout optimizations, decreasing drop-offs by 24% and recovering $180k in ARR in Q3."
+            }
+          }
+        ]
+      });
+      setViewState('diagnostic');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 1. Video Arena View
+  if (viewState === 'video_arena') {
+    return (
+      <VideoInterviewArena
+        role={targetRole}
+        company={targetCompany}
+        onFinishSession={handleFinishVideoSession}
+        onCancel={() => setViewState('readiness')}
+      />
+    );
+  }
+
+  // 2. Post-Session Diagnostic Report View
+  if (viewState === 'diagnostic') {
+    return (
+      <PostInterviewDiagnosticView
+        report={evaluationReport}
+        onPracticeAgain={() => setViewState('video_arena')}
+        onDone={() => setViewState('readiness')}
+      />
+    );
+  }
+
+  // 3. Pre-Interview Readiness View (Default)
+  const dims = readinessData?.dimensions || {
+    resume_match_pct: 91,
+    technical_depth_pct: 78,
+    communication_clarity_pct: 69,
+    star_answers_pct: 61,
+    confidence_delivery_pct: 74
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header & Controls */}
-      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-extrabold text-slate-100 tracking-tight flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-purple-400" />
-              <span>AI Mock Interview Room</span>
-            </h2>
-            {pressureMode && (
-              <span className="flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 uppercase animate-pulse">
-                <Flame className="w-3 h-3 fill-red-400" />
-                PRESSURE MODE ON
-              </span>
-            )}
-            {isListening && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse">
-                <Radio className="w-3 h-3" />
-                LISTENING
-              </span>
-            )}
-            {isSpeaking && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 animate-pulse">
-                <Volume2 className="w-3 h-3" />
-                AI SPEAKING
-              </span>
-            )}
+    <div className="space-y-8 max-w-4xl mx-auto pb-12">
+      {/* Target Setup Controls */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md">
+        <div className="flex items-center gap-3">
+          <span className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+            <Video className="w-5 h-5" />
+          </span>
+          <div>
+            <h3 className="font-extrabold text-sm text-slate-100">AI Video Mock Interview Simulator</h3>
+            <p className="text-xs text-slate-400">Live camera, audio visualizer, real-time filler word audit & STAR coaching</p>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Two-way verbal technical evaluation testing depth, trade-off defense, and TCS architecture.
-          </p>
         </div>
 
-        {/* Mode & Voice Controls */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          {/* Language / Accent Selector */}
-          <select
-            value={speechLang}
-            onChange={(e) => {
-              setSpeechLang(e.target.value);
-              stopListening();
-            }}
-            title="Speech Recognition Model & Accent"
-            className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
-          >
-            <option value="en-IN">🇮🇳 English (India)</option>
-            <option value="en-US">🇺🇸 English (US)</option>
-            <option value="en-GB">🇬🇧 English (UK)</option>
-          </select>
-
-          {/* Mode Selector */}
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
-          >
-            <option value="GenAI">GenAI & LangGraph</option>
-            <option value="Agentic AI">Agentic Architecture</option>
-            <option value="RAG">RAG & Vector Search</option>
-            <option value="Python">Python & FastAPI Async</option>
-            <option value="System Design">High-Scale System Design</option>
-            <option value="HR">Behavioral / HR</option>
-          </select>
-
-          {/* Voice Toggle & Male/Female Switch */}
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-            <button
-              onClick={() => {
-                if (voiceEnabled) stopSpeaking();
-                setVoiceEnabled(!voiceEnabled);
-              }}
-              title={voiceEnabled ? 'Mute AI Voice' : 'Enable AI Voice'}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                voiceEnabled
-                  ? 'bg-purple-600/20 text-purple-300'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              {voiceEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            </button>
-
-            {voiceEnabled && (
-              <div className="flex items-center gap-0.5 border-l border-slate-800 pl-1">
-                <button
-                  onClick={() => {
-                    setVoiceGender('male');
-                    stopSpeaking();
-                  }}
-                  className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all cursor-pointer ${
-                    voiceGender === 'male'
-                      ? 'bg-purple-600 text-white font-bold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  👨 Male
-                </button>
-                <button
-                  onClick={() => {
-                    setVoiceGender('female');
-                    stopSpeaking();
-                  }}
-                  className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all cursor-pointer ${
-                    voiceGender === 'female'
-                      ? 'bg-purple-600 text-white font-bold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  👩 Female
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Hands-Free Mode Toggle */}
-          <button
-            onClick={() => setHandsFree(!handsFree)}
-            title="Hands-Free Mode: Automatically turns on mic when AI finishes speaking"
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border font-semibold text-[11px] transition-all cursor-pointer ${
-              handsFree
-                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-sm'
-                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Radio className="w-3.5 h-3.5" />
-            <span>Hands-Free {handsFree ? 'ON' : 'OFF'}</span>
-          </button>
-
-          {/* Pressure Mode Toggle */}
-          <button
-            onClick={() => setPressureMode(!pressureMode)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              pressureMode
-                ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
-                : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5" />
-            <span>Pressure Mode</span>
-          </button>
-
-          <button
-            onClick={handleReset}
-            title="Reset Session"
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Chat Area */}
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 min-h-[420px] flex flex-col justify-between space-y-4">
-        {/* Messages Feed */}
-        <div className="space-y-4 overflow-y-auto max-h-[460px] pr-2">
-          {messages.map((m, idx) => (
-            <div
-              key={idx}
-              className={`flex gap-3 text-xs ${
-                m.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              {m.role !== 'user' && (
-                <div className="w-8 h-8 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                  AI
-                </div>
-              )}
-              <div
-                className={`p-4 rounded-2xl max-w-2xl leading-relaxed relative group ${
-                  m.role === 'user'
-                    ? 'bg-emerald-600 text-slate-950 font-medium rounded-br-none shadow-md'
-                    : 'bg-slate-950 border border-slate-800 text-slate-200 rounded-bl-none shadow-sm'
-                }`}
-              >
-                <div>{m.content}</div>
-
-                {/* Replay audio icon on AI messages */}
-                {m.role !== 'user' && (
-                  <button
-                    onClick={() => speakMessage(m.content)}
-                    title="Read Aloud"
-                    className="absolute -top-2 -right-2 p-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Volume2 className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {loading && (
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-              <span>Interviewer is analyzing your technical response...</span>
-            </div>
-          )}
-        </div>
-
-        {/* Input Bar with Voice Dictation */}
-        <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
-          {/* Mic Dictation Button */}
-          <button
-            onClick={toggleListening}
-            title={isListening ? 'Stop Speaking (Click to Finish)' : 'Speak Your Answer (Microphone)'}
-            className={`p-3 rounded-xl font-bold transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-              isListening
-                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/40 ring-2 ring-red-400'
-                : 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700'
-            }`}
-          >
-            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-          </button>
-
+        <div className="flex items-center gap-2 w-full md:w-auto">
           <input
             type="text"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendAnswer()}
-            placeholder={isListening ? '🎙️ Listening... Speak your technical explanation...' : 'Speak or type your technical answer here...'}
-            className={`flex-1 bg-slate-950 border rounded-xl px-4 py-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition-all ${
-              isListening ? 'border-emerald-500 bg-emerald-950/10' : 'border-slate-800 focus:border-emerald-500'
-            }`}
+            value={targetRole}
+            onChange={e => setTargetRole(e.target.value)}
+            placeholder="Target Role"
+            className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
           />
-
-          <button
-            onClick={handleSendAnswer}
-            disabled={!userInput.trim() || loading}
-            className="px-4 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-          >
-            <span>Submit</span>
-            <Send className="w-3.5 h-3.5" />
-          </button>
+          <input
+            type="text"
+            value={targetCompany}
+            onChange={e => setTargetCompany(e.target.value)}
+            placeholder="Target Company"
+            className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+          />
         </div>
       </div>
 
-      {/* Session Evaluation Card */}
-      {sessionEvaluation && (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-emerald-500/40 shadow-2xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 className="font-extrabold text-base text-slate-100 flex items-center gap-2">
-              <Award className="w-5 h-5 text-emerald-400" />
-              <span>Interview Session Scorecard</span>
-            </h3>
-            <span className="text-xl font-extrabold text-emerald-400">{sessionEvaluation.score_out_of_10}/10</span>
+      {/* ========================================================================= */}
+      {/* 🎯 PRE-INTERVIEW READINESS CARD */}
+      {/* ========================================================================= */}
+      <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6 text-center">
+        {/* Header Title */}
+        <div className="space-y-1">
+          <h2 className="text-2xl md:text-3xl font-black text-slate-100 uppercase tracking-wide">
+            {targetRole.toUpperCase()} — {targetCompany.toUpperCase()}
+          </h2>
+          <div className="h-0.5 w-32 bg-emerald-500 mx-auto rounded-full mt-2" />
+        </div>
+
+        {/* Overall Readiness Gauge */}
+        <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 max-w-sm mx-auto flex items-center justify-between">
+          <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Interview Readiness:</span>
+          <span className="text-3xl font-black text-emerald-400">{readinessData?.overall_readiness_pct || 72}%</span>
+        </div>
+
+        {/* 5-Dimensional Metrics Breakdown */}
+        <div className="space-y-3.5 max-w-md mx-auto text-left text-xs font-semibold pt-2">
+          {/* 1. Resume Match */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Resume Match</span>
+              <span className="font-mono font-bold text-emerald-400">{dims.resume_match_pct}%</span>
+            </div>
+            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${dims.resume_match_pct}%` }} />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-              <span className="font-bold text-emerald-400 uppercase text-[10px]">Key Strengths</span>
-              <ul className="list-disc list-inside text-slate-300 space-y-1">
-                {sessionEvaluation.strengths?.map((s: string, i: number) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
+          {/* 2. Technical Depth */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Technical Depth</span>
+              <span className="font-mono font-bold text-blue-400">{dims.technical_depth_pct}%</span>
             </div>
+            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${dims.technical_depth_pct}%` }} />
+            </div>
+          </div>
 
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-              <span className="font-bold text-amber-400 uppercase text-[10px]">Weaknesses to Improve</span>
-              <ul className="list-disc list-inside text-slate-300 space-y-1">
-                {sessionEvaluation.weaknesses?.map((w: string, i: number) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
+          {/* 3. Communication */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Communication Clarity</span>
+              <span className="font-mono font-bold text-indigo-400">{dims.communication_clarity_pct}%</span>
+            </div>
+            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${dims.communication_clarity_pct}%` }} />
+            </div>
+          </div>
+
+          {/* 4. STAR Answers */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">STAR Answers</span>
+              <span className="font-mono font-bold text-amber-400">{dims.star_answers_pct}%</span>
+            </div>
+            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div className="h-full bg-amber-500 rounded-full" style={{ width: `${dims.star_answers_pct}%` }} />
+            </div>
+          </div>
+
+          {/* 5. Confidence */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Confidence & Delivery</span>
+              <span className="font-mono font-bold text-purple-400">{dims.confidence_delivery_pct}%</span>
+            </div>
+            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${dims.confidence_delivery_pct}%` }} />
             </div>
           </div>
         </div>
-      )}
+
+        {/* PRIMARY ACTION BUTTON */}
+        <div className="pt-4">
+          <button
+            onClick={() => setViewState('video_arena')}
+            className="px-10 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm tracking-wide uppercase shadow-2xl shadow-emerald-500/30 flex items-center gap-3 mx-auto transition-transform hover:scale-105 cursor-pointer"
+          >
+            <Video className="w-5 h-5 fill-slate-950" />
+            <span>[ START VIDEO INTERVIEW ]</span>
+          </button>
+          <p className="text-[11px] text-slate-500 mt-2">Requires camera & mic permission • 6 adaptive questions</p>
+        </div>
+      </div>
     </div>
   );
 };

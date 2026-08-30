@@ -376,5 +376,11 @@ export const api = {
     fetchApi<any>('/discovery/normalize-title', {
       method: 'POST',
       body: JSON.stringify({ title })
-    })
+    }),
+
+  // AI Video Mock Interview Studio & Diagnostics
+  getVideoReadiness: (role?: string, company?: string) =>
+    fetchApi<any>(`/mock-interview/readiness-diagnostic?role=${encodeURIComponent(role || '')}&company=${encodeURIComponent(company || '')}`),
+  evaluateVideoSession: (data: { role?: string; company?: string; questions_and_answers: any[]; total_duration_seconds?: number }) =>
+    fetchApi<any>('/mock-interview/evaluate-video-session', { method: 'POST', body: JSON.stringify(data) }),
 };

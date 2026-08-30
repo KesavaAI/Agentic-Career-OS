@@ -3,7 +3,7 @@ import {
   TrendingUp, Users, FileText, Send, Flame, Sparkles, ChevronRight,
   AlertTriangle, CheckCircle2, Clock, ArrowUpRight, ArrowRight, Trophy, Briefcase,
   Mic, GraduationCap, RefreshCw, Mail, BellRing, Compass, BookOpen, Check, X,
-  Shield, Code, Zap
+  Shield, Code, Zap, Video
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';

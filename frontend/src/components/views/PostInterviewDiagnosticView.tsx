@@ -109,7 +109,7 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
             <Clock className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="text-2xl font-black text-emerald-300">{pillars.compression_score}%</p>
-          <p className="text-[11px] text-slate-400">Fluff-Free (<90s Answers)</p>
+          <p className="text-[11px] text-slate-400">Fluff-Free (&lt;90s Answers)</p>
         </div>
 
         {/* 4. Quantified Impact */}

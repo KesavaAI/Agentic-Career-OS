@@ -37,7 +37,13 @@ class BulletEnhanceReq(BaseModel):
     tech_stack: Optional[str] = "Python, FastAPI, SQL"
 
 @router.get("")
-def get_my_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.get("/me")
+def get_my_profile(current_user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user:
+        profile = db.query(Profile).first()
+        if not profile:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        return profile
     profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
     if not profile:
         # Auto-create profile if missing
@@ -46,31 +52,39 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
     return profile
 
 @router.put("")
-def update_my_profile(req: ProfileUpdateReq, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    if not profile:
-        from app.routers.auth import seed_profile_for_user
-        profile = seed_profile_for_user(db, current_user)
+def update_my_profile(req: ProfileUpdateReq, current_user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user:
+        profile = db.query(Profile).first()
+        if not profile:
+            raise HTTPException(status_code=401, detail="Authentication required")
+    else:
+        profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+        if not profile:
+            from app.routers.auth import seed_profile_for_user
+            profile = seed_profile_for_user(db, current_user)
 
     for field, val in req.dict(exclude_unset=True).items():
         if val is not None:
             setattr(profile, field, val)
 
     # Sync primary fields back to user
-    if req.full_name:
-        current_user.full_name = req.full_name
-    if req.target_role:
-        current_user.target_role = req.target_role
-    if req.target_min_ctc_lpa is not None:
-        current_user.target_min_ctc_lpa = str(req.target_min_ctc_lpa)
-    if req.current_ctc_lpa is not None:
-        current_user.current_ctc_lpa = str(req.current_ctc_lpa)
-    if req.experience_years is not None:
-        current_user.experience_years = str(req.experience_years)
-    if req.candidate_pool:
-        current_user.candidate_pool = req.candidate_pool
+    if current_user:
+        if req.full_name:
+            current_user.full_name = req.full_name
+        if req.target_role:
+            current_user.target_role = req.target_role
+        if req.target_min_ctc_lpa is not None:
+            current_user.target_min_ctc_lpa = str(req.target_min_ctc_lpa)
+        if req.current_ctc_lpa is not None:
+            current_user.current_ctc_lpa = str(req.current_ctc_lpa)
+        if req.experience_years is not None:
+            current_user.experience_years = str(req.experience_years)
+        if req.candidate_pool:
+            current_user.candidate_pool = req.candidate_pool
 
     db.commit()
+    db.refresh(profile)
+    return profile
 
     # Auto-synchronize role-calibrated technical revision flashcards for any role or experience level
     try:

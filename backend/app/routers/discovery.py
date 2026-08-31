@@ -33,6 +33,14 @@ def run_autonomous_job_scan(
 
 from app.services.role_intelligence_engine import role_intelligence_engine
 
+@router.get("/status")
+def get_discovery_status(current_user: Optional[User] = Depends(get_current_user)):
+    return {
+        "status": "ONLINE",
+        "connectors": ["Greenhouse", "Lever", "Ashby", "Himalayas", "DirectATS"],
+        "active": True
+    }
+
 @router.get("/taxonomy")
 def get_it_career_taxonomy():
     """

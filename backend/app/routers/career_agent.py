@@ -46,6 +46,7 @@ class AutopilotSettingsRequest(BaseModel):
 # ⚡ AUTONOMOUS AUTO-PILOT CONTROL ROOM ENDPOINTS
 # =========================================================================
 
+@router.get("/status")
 @router.get("/autopilot/status")
 def get_autopilot_status(
     current_user: Optional[User] = Depends(get_current_user),

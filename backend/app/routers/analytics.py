@@ -186,3 +186,14 @@ def get_funnel_analytics(db: Session = Depends(get_db)):
         "offer_rate_pct": off_rate,
         "applications_per_offer_estimate": apps_per_offer
     }
+
+@router.get("")
+@router.get("/dashboard")
+def get_analytics_dashboard(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    funnel = get_funnel_analytics(db)
+    readiness = get_readiness_score(db, current_user)
+    return {
+        "funnel": funnel,
+        "readiness": readiness,
+        "status": "ONLINE"
+    }

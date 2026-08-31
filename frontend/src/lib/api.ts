@@ -271,6 +271,10 @@ export const api = {
     fetchApi<any>('/jobs/ingest', { method: 'POST', body: JSON.stringify(data) }),
   autoClassifyAndCleanJobs: () => fetchApi<any>('/jobs/auto-classify-and-clean', { method: 'POST' }),
   batchAutoApplyJobs: (jobIds: number[]) => fetchApi<any>('/jobs/batch-auto-apply', { method: 'POST', body: JSON.stringify({ job_ids: jobIds }) }),
+  getJobMatchAnalysis: (id: number) => fetchApi<any>(`/jobs/${id}/match-analysis`),
+  evaluateJobMatch: (data: { job_dict?: any; job_id?: number; profile_override?: any }) =>
+    fetchApi<any>('/jobs/match', { method: 'POST', body: JSON.stringify(data) }),
+  recalculateMatches: () => fetchApi<any>('/jobs/recalculate-matches', { method: 'POST' }),
 
   // Applications
   getApplications: () => fetchApi<any[]>('/applications'),

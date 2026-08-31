@@ -8,6 +8,7 @@ import {
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { Job } from '../../types';
+import { JobMatchModal } from '../matching/JobMatchModal';
 
 interface DiscoveryViewProps {
   onOpenPrepare: (jobId: number) => void;
@@ -27,6 +28,7 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
 
   // Top 50 Scenario Interview Pack Modal State
   const [selectedScenarioJob, setSelectedScenarioJob] = useState<{ company: string; role: string; jobId?: number } | null>(null);
+  const [matchingJob, setMatchingJob] = useState<Job | null>(null);
   const [scenarioPack, setScenarioPack] = useState<any[]>([]);
   const [loadingScenarioPack, setLoadingScenarioPack] = useState(false);
   const [scenarioSearch, setScenarioSearch] = useState('');
@@ -268,9 +270,14 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
                     }`}>
                       TIER {job.tier}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400 px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800">
-                      {job.match_score}% Match
-                    </span>
+                    <button
+                      onClick={() => setMatchingJob(job)}
+                      className="text-[10px] font-bold text-cyan-300 hover:text-cyan-200 px-1.5 py-0.5 rounded bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-800/40 flex items-center gap-1 transition"
+                      title="View 8-Pillar Match Breakdown"
+                    >
+                      <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                      <span>{job.match_score}% Match</span>
+                    </button>
                     {job.source && (
                       <span className="text-[9px] font-bold text-indigo-300 px-1.5 py-0.5 rounded bg-indigo-950/40 border border-indigo-800/40">
                         {job.source}

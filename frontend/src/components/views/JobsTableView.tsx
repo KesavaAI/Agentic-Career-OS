@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Job } from '../../types';
+import { JobMatchModal } from '../matching/JobMatchModal';
 import { AgentFleetHUD } from '../agent/AgentFleetHUD';
 
 interface JobsTableViewProps {
@@ -26,6 +27,7 @@ export const JobsTableView: React.FC<JobsTableViewProps> = ({ onOpenPrepare, onO
   const [autoCleaning, setAutoCleaning] = useState(false);
   const [batchApplying, setBatchApplying] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+  const [matchingJob, setMatchingJob] = useState<Job | null>(null);
 
   useEffect(() => {
     loadJobs();
@@ -421,6 +423,12 @@ export const JobsTableView: React.FC<JobsTableViewProps> = ({ onOpenPrepare, onO
           </table>
         </div>
       </div>
+      <JobMatchModal
+        job={matchingJob}
+        isOpen={!!matchingJob}
+        onClose={() => setMatchingJob(null)}
+        onPrepareApply={onOpenPrepare}
+      />
     </div>
   );
 };

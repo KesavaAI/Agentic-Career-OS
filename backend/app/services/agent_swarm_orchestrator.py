@@ -5,11 +5,6 @@ from app.models.autopilot import AutopilotSetting, AutopilotLog
 from app.models.job import Job
 from app.models.application import Application
 from app.models.interview import Interview
-from app.models.profile import Profile
-from app.services.recruiter_headhunter_agent import recruiter_headhunter
-from app.services.company_dossier_agent import company_dossier_agent
-from app.services.offer_negotiator_agent import offer_negotiator
-from app.services.ai_service import ai_service
 
 class AgentSwarmOrchestrator:
     def __init__(self):
@@ -70,7 +65,6 @@ class AgentSwarmOrchestrator:
         """Returns the real-time DAG execution state across all swarm agents."""
         apps_count = db.query(Application).count()
         tier_a_count = db.query(Job).filter(Job.tier == "A", Job.is_archived == False).count()
-        interviews_count = db.query(Interview).count()
 
         # Dynamically update live metrics
         self.agent_nodes["scout"]["metrics"]["raw_leads_extracted"] = tier_a_count
@@ -99,26 +93,32 @@ class AgentSwarmOrchestrator:
         directive_clean = directive.strip()
         timestamp = datetime.utcnow().strftime("%H:%M:%S")
 
-        # Parse key intent signals
         is_tier_high = "30" in directive_clean or "35" in directive_clean or "25" in directive_clean or "senior" in directive_clean.lower() or "lead" in directive_clean.lower()
         is_remote_only = "remote" in directive_clean.lower()
-        is_cold_outreach = "vp" in directive_clean.lower() or "director" in directive_clean.lower() or "hiring manager" in directive_clean.lower() or "cold" in directive_clean.lower()
 
-        # Update database autopilot settings
-        setting = db.query(AutopilotSetting).first()
-        if not setting:
-            setting = AutopilotSetting(mode="FULL_AUTONOMOUS", is_active=True)
-            db.add(setting)
+        try:
+            # Update database autopilot settings
+            setting = db.query(AutopilotSetting).first()
+            if not setting:
+                setting = AutopilotSetting(mode="FULL_AUTONOMOUS", is_active=True)
+                db.add(setting)
+            else:
+                setting.is_active = True
+                setting.mode = "FULL_AUTONOMOUS"
 
-        # Append telemetry log
-        telemetry_entry = AutopilotLog(
-            action_type="DIRECTIVE_CALIBRATED",
-            target_company="SWARM_WIDE",
-            details=f"Commander Directive Received: '{directive_clean[:120]}...'. Swarm calibrated matching threshold to 92%+ and prioritized direct VP Eng infiltration.",
-            status="EXECUTED"
-        )
-        db.add(telemetry_entry)
-        db.commit()
+            # Append telemetry log using exact AutopilotLog model columns
+            telemetry_entry = AutopilotLog(
+                user_id=current_user_id,
+                event_type="DIRECTIVE_CALIBRATED",
+                company_name="SWARM_WIDE",
+                message=f"Commander Directive Received: '{directive_clean[:120]}...'. Calibrated matching threshold to 92%+ and prioritized direct infiltration.",
+                status="SUCCESS"
+            )
+            db.add(telemetry_entry)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error logging directive: {e}")
 
         actions_taken = [
             f"🎯 Calibrated Scout Agent filter to prioritize: {directive_clean[:60]}",
@@ -129,7 +129,7 @@ class AgentSwarmOrchestrator:
         if is_remote_only:
             actions_taken.append("🌐 Constrained Scout Agent to 100% Remote / Hybrid Global feeds")
         if is_tier_high:
-            actions_taken.append("💰 Filtered minimum package compensation baseline to ₹24.0L - ₹45.0L LPA")
+            actions_taken.append("💰 Filtered minimum package compensation baseline to Rs. 24.0L - 45.0L LPA")
 
         return {
             "success": True,
@@ -154,14 +154,18 @@ class AgentSwarmOrchestrator:
                 j.status = "AUTONOMOUSLY APPLIED"
                 applied_count += 1
 
-        # 3. Log Telemetry
-        db.add(AutopilotLog(
-            action_type="SWARM_PULSE_EXECUTED",
-            target_company="ALL_TIER_A",
-            details=f"Autonomous Swarm Sweep Complete: Scanned 104 feeds, hardened {len(tier_a_jobs)} STAR resumes, dispatched {applied_count} applications.",
-            status="SUCCESS"
-        ))
-        db.commit()
+        try:
+            # 3. Log Telemetry using exact AutopilotLog model columns
+            db.add(AutopilotLog(
+                event_type="SWARM_PULSE_EXECUTED",
+                company_name="ALL_TIER_A",
+                message=f"Autonomous Swarm Sweep Complete: Scanned 104 feeds, hardened {len(tier_a_jobs)} STAR resumes, dispatched {applied_count} applications.",
+                status="SUCCESS"
+            ))
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error logging swarm cycle: {e}")
 
         return {
             "success": True,

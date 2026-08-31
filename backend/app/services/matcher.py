@@ -1,39 +1,46 @@
 import json
 from typing import Dict, Any, List
-from app.services.role_intelligence_engine import role_intelligence_engine
+from app.services.matching_engine import ai_job_matcher
 
 class JobMatcher:
     @staticmethod
     def calculate_match(job_dict: Dict[str, Any], profile_dict: Dict[str, Any]) -> Dict[str, Any]:
-        match_result = role_intelligence_engine.calculate_universal_match(job_dict, profile_dict)
+        res = ai_job_matcher.calculate_match(job_dict, profile_dict)
         return {
-            "overall_score": match_result["overall_score"],
-            "priority_score": match_result["priority_score"],
-            "tier": match_result["tier"],
-            "skills_match": match_result["overall_score"],
-            "experience_match": 90,
-            "genai_match": match_result["overall_score"],
-            "agentic_ai_match": match_result["overall_score"],
-            "python_match": 90,
-            "cloud_match": 88,
-            "backend_match": 90,
-            "azure_match": 85,
-            "system_design_match": 88,
-            "location_match": 95,
-            "salary_potential": 95,
-            "breakdown": json.dumps(match_result.get("breakdown", {})),
-            "strengths": json.dumps(match_result["strengths"]),
-            "missing_skills": json.dumps(match_result["missing_skills"]),
-            "interview_risks": json.dumps([
-                f"Deep dive into {match_result['candidate_normalization']['specialization']} production trade-offs",
-                f"Defend system design and fault tolerance for {match_result['job_normalization']['normalized_role']}"
-            ]),
-            "resume_changes": json.dumps([
-                f"Highlight {match_result['job_normalization']['normalized_role']} project accomplishments",
-                f"Quantify production metrics matching {', '.join(match_result['matched_skills'][:3]) or 'core domain tools'}"
-            ]),
-            "recommendation": match_result["recommendation"],
-            "recommendation_rationale": f"Tier {match_result['tier']} match ({match_result['overall_score']}/100): High alignment with candidate's target role in {match_result['candidate_normalization']['career_family']}."
+            "overall_score": res["overall_score"],
+            "priority_score": res["priority_score"],
+            "tier": res["tier"],
+            "eligibility": res["eligibility"],
+            "recommendation": res["recommendation"],
+            "recommendation_rationale": res["recommendation_rationale"],
+            "role_alignment_score": res["role_alignment_score"],
+            "required_skills_score": res["required_skills_score"],
+            "preferred_skills_score": res["preferred_skills_score"],
+            "experience_fit_score": res["experience_fit_score"],
+            "projects_relevance_score": res["projects_relevance_score"],
+            "education_fit_score": res["education_fit_score"],
+            "salary_fit_score": res["salary_fit_score"],
+            "location_fit_score": res["location_fit_score"],
+            "pillar_scores": res["pillar_scores"],
+            "matched_skills": res["matched_skills"],
+            "missing_skills": res["missing_skills"],
+            "strengths": res["strengths"],
+            "concerns": res["concerns"],
+            # Legacy compatibility fields
+            "skills_match": res["required_skills_score"],
+            "experience_match": res["experience_fit_score"],
+            "genai_match": res["role_alignment_score"],
+            "agentic_ai_match": res["role_alignment_score"],
+            "python_match": res["required_skills_score"],
+            "cloud_match": res["required_skills_score"],
+            "backend_match": res["role_alignment_score"],
+            "azure_match": res["required_skills_score"],
+            "system_design_match": res["projects_relevance_score"],
+            "location_match": res["location_fit_score"],
+            "salary_potential": res["salary_fit_score"],
+            "breakdown": json.dumps(res.get("breakdown", {})),
+            "interview_risks": json.dumps(res["concerns"]),
+            "resume_changes": json.dumps([f"Emphasize experience with {s}" for s in res["missing_skills"][:2]])
         }
 
 job_matcher = JobMatcher()

@@ -1,0 +1,861 @@
+{
+  "total_endpoints": 95,
+  "healthy_live_endpoints": 94,
+  "endpoints": [
+    {
+      "tag": "Core",
+      "method": "GET",
+      "path": "/",
+      "status_code": 200,
+      "latency_ms": 10.3,
+      "is_live": true,
+      "summary": "Root"
+    },
+    {
+      "tag": "Analytics & Readiness",
+      "method": "GET",
+      "path": "/api/v1/analytics/funnel",
+      "status_code": 200,
+      "latency_ms": 2306.4,
+      "is_live": true,
+      "summary": "Get Funnel Analytics"
+    },
+    {
+      "tag": "Analytics & Readiness",
+      "method": "GET",
+      "path": "/api/v1/analytics/readiness",
+      "status_code": 200,
+      "latency_ms": 2008.6,
+      "is_live": true,
+      "summary": "Get Readiness Score"
+    },
+    {
+      "tag": "Analytics & Readiness",
+      "method": "GET",
+      "path": "/api/v1/analytics/today-priorities",
+      "status_code": 200,
+      "latency_ms": 3834.2,
+      "is_live": true,
+      "summary": "Get Today Priorities"
+    },
+    {
+      "tag": "Applications",
+      "method": "GET",
+      "path": "/api/v1/applications",
+      "status_code": 200,
+      "latency_ms": 991.0,
+      "is_live": true,
+      "summary": "List Applications"
+    },
+    {
+      "tag": "Applications",
+      "method": "POST",
+      "path": "/api/v1/applications",
+      "status_code": 422,
+      "latency_ms": 60.9,
+      "is_live": true,
+      "summary": "Create Application"
+    },
+    {
+      "tag": "Applications",
+      "method": "POST",
+      "path": "/api/v1/applications/clear-all",
+      "status_code": 200,
+      "latency_ms": 1720.9,
+      "is_live": true,
+      "summary": "Clear All Applications"
+    },
+    {
+      "tag": "Applications",
+      "method": "GET",
+      "path": "/api/v1/applications/{app_id}",
+      "status_code": 404,
+      "latency_ms": 1011.1,
+      "is_live": true,
+      "summary": "Get Application"
+    },
+    {
+      "tag": "Applications",
+      "method": "PUT",
+      "path": "/api/v1/applications/{app_id}",
+      "status_code": 404,
+      "latency_ms": 988.1,
+      "is_live": true,
+      "summary": "Update Application"
+    },
+    {
+      "tag": "Applications",
+      "method": "DELETE",
+      "path": "/api/v1/applications/{app_id}",
+      "status_code": 404,
+      "latency_ms": 1012.6,
+      "is_live": true,
+      "summary": "Delete Application"
+    },
+    {
+      "tag": "Applications",
+      "method": "GET",
+      "path": "/api/v1/applications/{app_id}/events",
+      "status_code": 200,
+      "latency_ms": 988.1,
+      "is_live": true,
+      "summary": "Get Application Events"
+    },
+    {
+      "tag": "Applications",
+      "method": "GET",
+      "path": "/api/v1/applications/{app_id}/evidence",
+      "status_code": 200,
+      "latency_ms": 1189.0,
+      "is_live": true,
+      "summary": "Get Application Evidence"
+    },
+    {
+      "tag": "Applications",
+      "method": "POST",
+      "path": "/api/v1/applications/{app_id}/evidence",
+      "status_code": 422,
+      "latency_ms": 16.1,
+      "is_live": true,
+      "summary": "Add Application Evidence"
+    },
+    {
+      "tag": "Audit Logs",
+      "method": "GET",
+      "path": "/api/v1/audit",
+      "status_code": 500,
+      "latency_ms": 1361.2,
+      "is_live": false,
+      "summary": "List Audit Logs"
+    },
+    {
+      "tag": "Auth",
+      "method": "POST",
+      "path": "/api/v1/auth/change-password",
+      "status_code": 422,
+      "latency_ms": 981.7,
+      "is_live": true,
+      "summary": "Change Password"
+    },
+    {
+      "tag": "Auth",
+      "method": "POST",
+      "path": "/api/v1/auth/forgot-password",
+      "status_code": 422,
+      "latency_ms": 15.8,
+      "is_live": true,
+      "summary": "Forgot Password"
+    },
+    {
+      "tag": "Auth",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status_code": 422,
+      "latency_ms": 14.2,
+      "is_live": true,
+      "summary": "Login"
+    },
+    {
+      "tag": "Auth",
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "status_code": 200,
+      "latency_ms": 1295.7,
+      "is_live": true,
+      "summary": "Get Me"
+    },
+    {
+      "tag": "Auth",
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "status_code": 422,
+      "latency_ms": 14.5,
+      "is_live": true,
+      "summary": "Register"
+    },
+    {
+      "tag": "Auth",
+      "method": "POST",
+      "path": "/api/v1/auth/request-otp",
+      "status_code": 422,
+      "latency_ms": 10.1,
+      "is_live": true,
+      "summary": "Request Otp"
+    },
+    {
+      "tag": "Auth",
+      "method": "POST",
+      "path": "/api/v1/auth/resend-verification",
+      "status_code": 422,
+      "latency_ms": 8.9,
+      "is_live": true,
+      "summary": "Resend Verification"
+    },
+    {
+      "tag": "Auth",
+      "method": "POST",
+      "path": "/api/v1/auth/reset-password",
+      "status_code": 422,
+      "latency_ms": 11.6,
+      "is_live": true,
+      "summary": "Reset Password"
+    },
+    {
+      "tag": "Auth",
+      "method": "POST",
+      "path": "/api/v1/auth/verify-email",
+      "status_code": 422,
+      "latency_ms": 11.1,
+      "is_live": true,
+      "summary": "Verify Email"
+    },
+    {
+      "tag": "Auth",
+      "method": "POST",
+      "path": "/api/v1/auth/verify-otp-login",
+      "status_code": 422,
+      "latency_ms": 9.7,
+      "is_live": true,
+      "summary": "Verify Otp Login"
+    },
+    {
+      "tag": "Backup & Export",
+      "method": "GET",
+      "path": "/api/v1/backup-export/export-jobs-csv",
+      "status_code": 200,
+      "latency_ms": 1771.6,
+      "is_live": true,
+      "summary": "Export Jobs Csv"
+    },
+    {
+      "tag": "Backup & Export",
+      "method": "GET",
+      "path": "/api/v1/backup-export/export-json",
+      "status_code": 200,
+      "latency_ms": 3800.4,
+      "is_live": true,
+      "summary": "Export All Data"
+    },
+    {
+      "tag": "Career Agent",
+      "method": "POST",
+      "path": "/api/v1/career-agent/approve",
+      "status_code": 422,
+      "latency_ms": 17.0,
+      "is_live": true,
+      "summary": "Submit Agent Approval"
+    },
+    {
+      "tag": "Career Agent",
+      "method": "POST",
+      "path": "/api/v1/career-agent/run",
+      "status_code": 422,
+      "latency_ms": 9.6,
+      "is_live": true,
+      "summary": "Run Career Agent Pipeline"
+    },
+    {
+      "tag": "Companies",
+      "method": "GET",
+      "path": "/api/v1/companies",
+      "status_code": 200,
+      "latency_ms": 987.9,
+      "is_live": true,
+      "summary": "List Companies"
+    },
+    {
+      "tag": "Companies",
+      "method": "POST",
+      "path": "/api/v1/companies",
+      "status_code": 422,
+      "latency_ms": 13.6,
+      "is_live": true,
+      "summary": "Create Company"
+    },
+    {
+      "tag": "Companies",
+      "method": "GET",
+      "path": "/api/v1/companies/{comp_id}",
+      "status_code": 404,
+      "latency_ms": 984.3,
+      "is_live": true,
+      "summary": "Get Company"
+    },
+    {
+      "tag": "Companies",
+      "method": "PUT",
+      "path": "/api/v1/companies/{comp_id}",
+      "status_code": 404,
+      "latency_ms": 989.1,
+      "is_live": true,
+      "summary": "Update Company"
+    },
+    {
+      "tag": "Autonomous Job Discovery Agent",
+      "method": "POST",
+      "path": "/api/v1/discovery/normalize-title",
+      "status_code": 422,
+      "latency_ms": 51.9,
+      "is_live": true,
+      "summary": "Normalize Job Title"
+    },
+    {
+      "tag": "Autonomous Job Discovery Agent",
+      "method": "POST",
+      "path": "/api/v1/discovery/run-auto-scan",
+      "status_code": 200,
+      "latency_ms": 4114.7,
+      "is_live": true,
+      "summary": "Run Autonomous Job Scan"
+    },
+    {
+      "tag": "Autonomous Job Discovery Agent",
+      "method": "GET",
+      "path": "/api/v1/discovery/taxonomy",
+      "status_code": 200,
+      "latency_ms": 14.5,
+      "is_live": true,
+      "summary": "Get It Career Taxonomy"
+    },
+    {
+      "tag": "Live Email & Gmail Sync",
+      "method": "POST",
+      "path": "/api/v1/email/send-outreach",
+      "status_code": 422,
+      "latency_ms": 11.2,
+      "is_live": true,
+      "summary": "Send Recruiter Outreach"
+    },
+    {
+      "tag": "Live Email & Gmail Sync",
+      "method": "GET",
+      "path": "/api/v1/email/status",
+      "status_code": 200,
+      "latency_ms": 987.6,
+      "is_live": true,
+      "summary": "Get Email Status"
+    },
+    {
+      "tag": "Live Email & Gmail Sync",
+      "method": "POST",
+      "path": "/api/v1/email/sync",
+      "status_code": 200,
+      "latency_ms": 2491.6,
+      "is_live": true,
+      "summary": "Sync Gmail Inbox"
+    },
+    {
+      "tag": "Live Email & Gmail Sync",
+      "method": "POST",
+      "path": "/api/v1/email/test-connection",
+      "status_code": 200,
+      "latency_ms": 2223.4,
+      "is_live": true,
+      "summary": "Test Email Connection"
+    },
+    {
+      "tag": "Follow-ups",
+      "method": "GET",
+      "path": "/api/v1/followups",
+      "status_code": 200,
+      "latency_ms": 984.9,
+      "is_live": true,
+      "summary": "List Followups"
+    },
+    {
+      "tag": "Follow-ups",
+      "method": "POST",
+      "path": "/api/v1/followups",
+      "status_code": 422,
+      "latency_ms": 5.9,
+      "is_live": true,
+      "summary": "Create Followup"
+    },
+    {
+      "tag": "Follow-ups",
+      "method": "PUT",
+      "path": "/api/v1/followups/{fu_id}",
+      "status_code": 404,
+      "latency_ms": 997.4,
+      "is_live": true,
+      "summary": "Update Followup"
+    },
+    {
+      "tag": "Follow-ups",
+      "method": "POST",
+      "path": "/api/v1/followups/{fu_id}/complete",
+      "status_code": 404,
+      "latency_ms": 970.0,
+      "is_live": true,
+      "summary": "Complete Followup"
+    },
+    {
+      "tag": "Interviews",
+      "method": "GET",
+      "path": "/api/v1/interviews",
+      "status_code": 200,
+      "latency_ms": 986.0,
+      "is_live": true,
+      "summary": "List Interviews"
+    },
+    {
+      "tag": "Interviews",
+      "method": "POST",
+      "path": "/api/v1/interviews",
+      "status_code": 422,
+      "latency_ms": 8.8,
+      "is_live": true,
+      "summary": "Create Interview"
+    },
+    {
+      "tag": "Interviews",
+      "method": "GET",
+      "path": "/api/v1/interviews/job/{job_id}/pack",
+      "status_code": 200,
+      "latency_ms": 1220.3,
+      "is_live": true,
+      "summary": "Get Interview Pack For Job"
+    },
+    {
+      "tag": "Interviews",
+      "method": "GET",
+      "path": "/api/v1/interviews/job/{job_id}/scenario-pack",
+      "status_code": 200,
+      "latency_ms": 978.6,
+      "is_live": true,
+      "summary": "Get Scenario Pack For Job"
+    },
+    {
+      "tag": "Interviews",
+      "method": "GET",
+      "path": "/api/v1/interviews/resume-defense",
+      "status_code": 200,
+      "latency_ms": 1213.1,
+      "is_live": true,
+      "summary": "Get Resume Defense"
+    },
+    {
+      "tag": "Interviews",
+      "method": "GET",
+      "path": "/api/v1/interviews/scenario-pack",
+      "status_code": 200,
+      "latency_ms": 6.1,
+      "is_live": true,
+      "summary": "Get Scenario Pack Generic"
+    },
+    {
+      "tag": "Interviews",
+      "method": "GET",
+      "path": "/api/v1/interviews/{int_id}",
+      "status_code": 404,
+      "latency_ms": 969.8,
+      "is_live": true,
+      "summary": "Get Interview"
+    },
+    {
+      "tag": "Interviews",
+      "method": "PUT",
+      "path": "/api/v1/interviews/{int_id}",
+      "status_code": 404,
+      "latency_ms": 972.9,
+      "is_live": true,
+      "summary": "Update Interview"
+    },
+    {
+      "tag": "Jobs",
+      "method": "GET",
+      "path": "/api/v1/jobs",
+      "status_code": 200,
+      "latency_ms": 1458.5,
+      "is_live": true,
+      "summary": "List Jobs"
+    },
+    {
+      "tag": "Jobs",
+      "method": "POST",
+      "path": "/api/v1/jobs",
+      "status_code": 422,
+      "latency_ms": 8.3,
+      "is_live": true,
+      "summary": "Create Job"
+    },
+    {
+      "tag": "Jobs",
+      "method": "POST",
+      "path": "/api/v1/jobs/bulk",
+      "status_code": 422,
+      "latency_ms": 5.3,
+      "is_live": true,
+      "summary": "Bulk Job Action"
+    },
+    {
+      "tag": "Jobs",
+      "method": "POST",
+      "path": "/api/v1/jobs/ingest",
+      "status_code": 200,
+      "latency_ms": 5111.4,
+      "is_live": true,
+      "summary": "Ingest Job"
+    },
+    {
+      "tag": "Jobs",
+      "method": "GET",
+      "path": "/api/v1/jobs/{job_id}",
+      "status_code": 200,
+      "latency_ms": 977.6,
+      "is_live": true,
+      "summary": "Get Job"
+    },
+    {
+      "tag": "Jobs",
+      "method": "PUT",
+      "path": "/api/v1/jobs/{job_id}",
+      "status_code": 200,
+      "latency_ms": 3157.4,
+      "is_live": true,
+      "summary": "Update Job"
+    },
+    {
+      "tag": "Jobs",
+      "method": "DELETE",
+      "path": "/api/v1/jobs/{job_id}",
+      "status_code": 200,
+      "latency_ms": 2194.6,
+      "is_live": true,
+      "summary": "Delete Job"
+    },
+    {
+      "tag": "Jobs",
+      "method": "POST",
+      "path": "/api/v1/jobs/{job_id}/analyze",
+      "status_code": 404,
+      "latency_ms": 973.2,
+      "is_live": true,
+      "summary": "Analyze Job"
+    },
+    {
+      "tag": "Learning & Skill Gap",
+      "method": "GET",
+      "path": "/api/v1/learning",
+      "status_code": 200,
+      "latency_ms": 977.8,
+      "is_live": true,
+      "summary": "List Topics"
+    },
+    {
+      "tag": "Learning & Skill Gap",
+      "method": "POST",
+      "path": "/api/v1/learning",
+      "status_code": 422,
+      "latency_ms": 8.4,
+      "is_live": true,
+      "summary": "Create Topic"
+    },
+    {
+      "tag": "Learning & Skill Gap",
+      "method": "POST",
+      "path": "/api/v1/learning/recall-checkin",
+      "status_code": 422,
+      "latency_ms": 6.1,
+      "is_live": true,
+      "summary": "Recall Checkin"
+    },
+    {
+      "tag": "Learning & Skill Gap",
+      "method": "PUT",
+      "path": "/api/v1/learning/{topic_id}",
+      "status_code": 200,
+      "latency_ms": 1949.4,
+      "is_live": true,
+      "summary": "Update Topic"
+    },
+    {
+      "tag": "Market Intelligence",
+      "method": "GET",
+      "path": "/api/v1/market",
+      "status_code": 200,
+      "latency_ms": 985.0,
+      "is_live": true,
+      "summary": "Get Market Intelligence"
+    },
+    {
+      "tag": "Mock Interview",
+      "method": "GET",
+      "path": "/api/v1/mock-interview/sessions",
+      "status_code": 200,
+      "latency_ms": 976.0,
+      "is_live": true,
+      "summary": "List Mock Sessions"
+    },
+    {
+      "tag": "Mock Interview",
+      "method": "POST",
+      "path": "/api/v1/mock-interview/turn",
+      "status_code": 422,
+      "latency_ms": 8.4,
+      "is_live": true,
+      "summary": "Mock Interview Turn"
+    },
+    {
+      "tag": "Notifications",
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status_code": 200,
+      "latency_ms": 985.3,
+      "is_live": true,
+      "summary": "List Notifications"
+    },
+    {
+      "tag": "Notifications",
+      "method": "POST",
+      "path": "/api/v1/notifications/{notif_id}/read",
+      "status_code": 200,
+      "latency_ms": 974.8,
+      "is_live": true,
+      "summary": "Mark Read"
+    },
+    {
+      "tag": "Offers",
+      "method": "GET",
+      "path": "/api/v1/offers",
+      "status_code": 200,
+      "latency_ms": 976.6,
+      "is_live": true,
+      "summary": "List Offers"
+    },
+    {
+      "tag": "Offers",
+      "method": "POST",
+      "path": "/api/v1/offers",
+      "status_code": 422,
+      "latency_ms": 9.5,
+      "is_live": true,
+      "summary": "Create Offer"
+    },
+    {
+      "tag": "Offers",
+      "method": "POST",
+      "path": "/api/v1/offers/generate-negotiation-script",
+      "status_code": 422,
+      "latency_ms": 5.1,
+      "is_live": true,
+      "summary": "Generate Negotiation Script"
+    },
+    {
+      "tag": "Offers",
+      "method": "PUT",
+      "path": "/api/v1/offers/{offer_id}",
+      "status_code": 404,
+      "latency_ms": 978.0,
+      "is_live": true,
+      "summary": "Update Offer"
+    },
+    {
+      "tag": "Profile",
+      "method": "GET",
+      "path": "/api/v1/profile",
+      "status_code": 200,
+      "latency_ms": 1223.0,
+      "is_live": true,
+      "summary": "Get My Profile"
+    },
+    {
+      "tag": "Profile",
+      "method": "PUT",
+      "path": "/api/v1/profile",
+      "status_code": 200,
+      "latency_ms": 3981.4,
+      "is_live": true,
+      "summary": "Update My Profile"
+    },
+    {
+      "tag": "Profile",
+      "method": "POST",
+      "path": "/api/v1/profile/enhance-bullet",
+      "status_code": 422,
+      "latency_ms": 5.3,
+      "is_live": true,
+      "summary": "Enhance Bullet Point"
+    },
+    {
+      "tag": "Projects",
+      "method": "GET",
+      "path": "/api/v1/projects",
+      "status_code": 200,
+      "latency_ms": 978.4,
+      "is_live": true,
+      "summary": "List Projects"
+    },
+    {
+      "tag": "Projects",
+      "method": "POST",
+      "path": "/api/v1/projects",
+      "status_code": 422,
+      "latency_ms": 5.0,
+      "is_live": true,
+      "summary": "Create Project"
+    },
+    {
+      "tag": "Projects",
+      "method": "GET",
+      "path": "/api/v1/projects/tcs-agentic-intelligence",
+      "status_code": 404,
+      "latency_ms": 975.2,
+      "is_live": true,
+      "summary": "Get Tcs Project"
+    },
+    {
+      "tag": "Projects",
+      "method": "GET",
+      "path": "/api/v1/projects/{proj_id}",
+      "status_code": 404,
+      "latency_ms": 969.2,
+      "is_live": true,
+      "summary": "Get Project"
+    },
+    {
+      "tag": "Projects",
+      "method": "PUT",
+      "path": "/api/v1/projects/{proj_id}",
+      "status_code": 404,
+      "latency_ms": 968.2,
+      "is_live": true,
+      "summary": "Update Project"
+    },
+    {
+      "tag": "Recruiters",
+      "method": "GET",
+      "path": "/api/v1/recruiters",
+      "status_code": 200,
+      "latency_ms": 992.1,
+      "is_live": true,
+      "summary": "List Recruiters"
+    },
+    {
+      "tag": "Recruiters",
+      "method": "POST",
+      "path": "/api/v1/recruiters",
+      "status_code": 422,
+      "latency_ms": 8.7,
+      "is_live": true,
+      "summary": "Create Recruiter"
+    },
+    {
+      "tag": "Recruiters",
+      "method": "POST",
+      "path": "/api/v1/recruiters/template",
+      "status_code": 422,
+      "latency_ms": 8.4,
+      "is_live": true,
+      "summary": "Get Outreach Template"
+    },
+    {
+      "tag": "Recruiters",
+      "method": "PUT",
+      "path": "/api/v1/recruiters/{rec_id}",
+      "status_code": 404,
+      "latency_ms": 972.1,
+      "is_live": true,
+      "summary": "Update Recruiter"
+    },
+    {
+      "tag": "Resumes",
+      "method": "GET",
+      "path": "/api/v1/resumes",
+      "status_code": 200,
+      "latency_ms": 975.2,
+      "is_live": true,
+      "summary": "List Resumes"
+    },
+    {
+      "tag": "Resumes",
+      "method": "POST",
+      "path": "/api/v1/resumes",
+      "status_code": 422,
+      "latency_ms": 5.3,
+      "is_live": true,
+      "summary": "Create Resume"
+    },
+    {
+      "tag": "Resumes",
+      "method": "POST",
+      "path": "/api/v1/resumes/ats-simulate",
+      "status_code": 422,
+      "latency_ms": 7.7,
+      "is_live": true,
+      "summary": "Simulate Ats"
+    },
+    {
+      "tag": "Resumes",
+      "method": "POST",
+      "path": "/api/v1/resumes/enhance-bullet",
+      "status_code": 422,
+      "latency_ms": 4.0,
+      "is_live": true,
+      "summary": "Enhance Bullet"
+    },
+    {
+      "tag": "Resumes",
+      "method": "POST",
+      "path": "/api/v1/resumes/tailor",
+      "status_code": 422,
+      "latency_ms": 8.0,
+      "is_live": true,
+      "summary": "Tailor Resume"
+    },
+    {
+      "tag": "Resumes",
+      "method": "GET",
+      "path": "/api/v1/resumes/{resume_id}",
+      "status_code": 404,
+      "latency_ms": 970.1,
+      "is_live": true,
+      "summary": "Get Resume"
+    },
+    {
+      "tag": "Resumes",
+      "method": "PUT",
+      "path": "/api/v1/resumes/{resume_id}",
+      "status_code": 404,
+      "latency_ms": 968.9,
+      "is_live": true,
+      "summary": "Update Resume"
+    },
+    {
+      "tag": "Settings",
+      "method": "GET",
+      "path": "/api/v1/settings",
+      "status_code": 200,
+      "latency_ms": 10.6,
+      "is_live": true,
+      "summary": "Get Settings"
+    },
+    {
+      "tag": "Settings",
+      "method": "POST",
+      "path": "/api/v1/settings/clear-demo-data",
+      "status_code": 200,
+      "latency_ms": 2422.5,
+      "is_live": true,
+      "summary": "Trigger Clear Demo Data"
+    },
+    {
+      "tag": "Settings",
+      "method": "POST",
+      "path": "/api/v1/settings/seed-data",
+      "status_code": 200,
+      "latency_ms": 9.0,
+      "is_live": true,
+      "summary": "Trigger Seed Data"
+    },
+    {
+      "tag": "Core",
+      "method": "GET",
+      "path": "/health",
+      "status_code": 200,
+      "latency_ms": 7.6,
+      "is_live": true,
+      "summary": "Health"
+    }
+  ]
+}

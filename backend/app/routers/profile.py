@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 from app.database import get_db
 from app.models.user import User
 from app.models.profile import Profile
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_required_user
 from app.services.ai_service import ai_service
 
 router = APIRouter(prefix="/profile", tags=["Profile"])

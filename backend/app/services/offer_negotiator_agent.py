@@ -108,4 +108,18 @@ class OfferNegotiatorAgent:
             "email_template": balanced_email_script
         }
 
+
+    def generate_playbook(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        return self.generate_negotiation_playbook(
+            company_name=data.get("company_name", "Target Tech"),
+            role_title=data.get("role_title", "Software Engineer"),
+            offered_base_lpa=data.get("offered_base_lpa", 25.0),
+            offered_variable_lpa=data.get("offered_variable_lpa", 0.0),
+            offered_esops_lpa=data.get("offered_esops_lpa", 0.0),
+            offered_joining_bonus_lpa=data.get("offered_joining_bonus_lpa", 0.0),
+            competing_offers_count=data.get("competing_offers_count", 1),
+            competing_highest_ctc_lpa=data.get("competing_highest_ctc_lpa"),
+            candidate_name=data.get("candidate_name", "Candidate")
+        )
+
 offer_negotiator_agent = OfferNegotiatorAgent()

@@ -101,6 +101,7 @@ class CompanyDossierAgent:
             "target_role": role,
             "executive_summary": f"Comprehensive 1-Page Technical Intelligence Dossier prepared for {role} interview at {company_name.capitalize()}.",
             "engineering_stack": knowledge["stack"],
+            "tech_stack": knowledge["stack"].split(", "),
             "scale_metrics": knowledge["scale_metrics"],
             "architecture_traps": knowledge["architecture_traps"],
             "top_interview_questions": knowledge["top_questions"],

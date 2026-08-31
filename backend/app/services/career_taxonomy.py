@@ -192,10 +192,44 @@ class CareerTaxonomyEngine:
     def get_role_intelligence(cls, role_name: str) -> Dict[str, Any]:
         role_clean = role_name.strip().lower()
         
+        # Pass 1: Exact / substring match on primary_roles
         for dom_id, dom_data in cls.DOMAINS.items():
             for stream in dom_data["streams"]:
-                all_roles = stream["primary_roles"] + stream["related_roles"] + stream["adjacent_roles"]
-                if any(role_clean in r.lower() or r.lower() in role_clean for r in all_roles):
+                if any(role_clean == r.lower() or role_clean in r.lower() or r.lower() in role_clean for r in stream["primary_roles"]):
+                    return {
+                        "domain_id": dom_id,
+                        "domain_name": dom_data["name"],
+                        "stream_name": stream["name"],
+                        "matched_role": role_name,
+                        "primary_roles": stream["primary_roles"],
+                        "related_roles": stream["related_roles"],
+                        "adjacent_roles": stream["adjacent_roles"],
+                        "required_skills": stream["required_skills"],
+                        "preferred_skills": stream["preferred_skills"],
+                        "matching_weights": stream["matching_weights"]
+                    }
+
+        # Pass 2: Match on related_roles
+        for dom_id, dom_data in cls.DOMAINS.items():
+            for stream in dom_data["streams"]:
+                if any(role_clean in r.lower() or r.lower() in role_clean for r in stream["related_roles"]):
+                    return {
+                        "domain_id": dom_id,
+                        "domain_name": dom_data["name"],
+                        "stream_name": stream["name"],
+                        "matched_role": role_name,
+                        "primary_roles": stream["primary_roles"],
+                        "related_roles": stream["related_roles"],
+                        "adjacent_roles": stream["adjacent_roles"],
+                        "required_skills": stream["required_skills"],
+                        "preferred_skills": stream["preferred_skills"],
+                        "matching_weights": stream["matching_weights"]
+                    }
+
+        # Pass 3: Match on adjacent_roles
+        for dom_id, dom_data in cls.DOMAINS.items():
+            for stream in dom_data["streams"]:
+                if any(role_clean in r.lower() or r.lower() in role_clean for r in stream["adjacent_roles"]):
                     return {
                         "domain_id": dom_id,
                         "domain_name": dom_data["name"],

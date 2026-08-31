@@ -12,7 +12,18 @@ class Profile(Base):
     email = Column(String(255), nullable=False)
     phone = Column(String(50), default="")
     location = Column(String(100), default="")
+    
+    # Career Role Intelligence & Context
+    primary_career = Column(String(255), default="Software Engineer", index=True)
+    career_stream = Column(String(255), default="Full Stack Engineering")
+    role_family = Column(String(255), default="Software Engineering")
     target_role = Column(String(255), default="Software Engineer")
+    target_roles = Column(JSON, default=list) # List of target titles
+    specializations = Column(JSON, default=list) # List of specializations (RAG, LLM, Agents, etc.)
+    experience_level = Column(String(50), default="Experienced (1-3 yrs)")
+    remote_preference = Column(String(50), default="Hybrid") # Remote, Hybrid, Onsite
+    salary_preference = Column(JSON, default=dict) # {min_ctc_lpa, target_ctc_lpa}
+
     target_min_ctc_lpa = Column(Float, default=15.0)
     current_ctc_lpa = Column(Float, default=0.0)
     experience_years = Column(Float, default=0.0)

@@ -71,6 +71,7 @@ app.include_router(settings_router.router, prefix=settings.API_V1_STR)
 app.include_router(email_sync.router, prefix=settings.API_V1_STR)
 app.include_router(discovery.router, prefix=settings.API_V1_STR)
 app.include_router(taxonomy.router, prefix=settings.API_V1_STR)
+app.include_router(taxonomy.career_intel_router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 def on_startup():

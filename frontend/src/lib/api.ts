@@ -376,5 +376,20 @@ export const api = {
     fetchApi<any>('/discovery/normalize-title', {
       method: 'POST',
       body: JSON.stringify({ title })
-    })
+    }),
+
+  // ⚡ 24/7 Autonomous Career Auto-Pilot
+  getAutopilotStatus: () => fetchApi<any>('/career-agent/autopilot/status'),
+  toggleAutopilot: (data: { is_active?: boolean; mode?: string }) =>
+    fetchApi<any>('/career-agent/autopilot/toggle', { method: 'POST', body: JSON.stringify(data) }),
+  updateAutopilotSettings: (data: {
+    min_match_threshold?: number;
+    daily_max_applications?: number;
+    min_salary_lpa?: number;
+    auto_followup_enabled?: boolean;
+    auto_inbox_sync_enabled?: boolean;
+    cycle_interval_minutes?: number;
+  }) => fetchApi<any>('/career-agent/autopilot/settings', { method: 'POST', body: JSON.stringify(data) }),
+  getAutopilotLogs: (limit?: number) => fetchApi<any>(`/career-agent/autopilot/logs?limit=${limit || 50}`),
+  triggerAutopilotCycle: () => fetchApi<any>('/career-agent/autopilot/trigger-now', { method: 'POST' })
 };

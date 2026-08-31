@@ -16,3 +16,4 @@ from app.models.followup import FollowUp
 from app.models.notification import Notification
 from app.models.audit import AuditLog
 from app.models.setting import SystemSetting
+from app.models.autopilot import AutopilotSetting, AutopilotLog

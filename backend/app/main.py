@@ -72,7 +72,8 @@ app.include_router(discovery.router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 def on_startup():
-    pass
+    from app.services.career_heartbeat_daemon import career_heartbeat_daemon
+    career_heartbeat_daemon.start_background_scheduler()
 
 @app.get("/")
 def root():

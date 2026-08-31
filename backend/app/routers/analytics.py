@@ -157,9 +157,10 @@ def get_today_priorities(db: Session = Depends(get_db), current_user: User = Dep
 
 @router.get("/readiness")
 def get_readiness_score(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first() if current_user else db.query(Profile).first()
+    user_id = current_user.id if (current_user and hasattr(current_user, 'id')) else None
+    profile = db.query(Profile).filter(Profile.user_id == user_id).first() if user_id else db.query(Profile).first()
     target_role = profile.target_role if (profile and profile.target_role) else "Full Stack / Web Development"
-    candidate_name = (current_user.full_name if current_user else (profile.full_name if profile else "Alexander"))
+    candidate_name = (current_user.full_name if (current_user and hasattr(current_user, 'full_name') and current_user.full_name) else (profile.full_name if profile else "Alexander"))
     target_ctc = float(profile.target_min_ctc_lpa) if (profile and profile.target_min_ctc_lpa) else 24.0
 
     learning_greens = db.query(LearningTopic).filter(LearningTopic.status == "GREEN").count()

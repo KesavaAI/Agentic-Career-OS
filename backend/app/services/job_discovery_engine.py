@@ -152,7 +152,7 @@ class JobDiscoveryEngine:
             if match_score >= 90:
                 # 1. Tailor Google STAR Resume
                 prof_dict = {"full_name": cand_name, "email": cand_email, "location": new_job.location}
-                tailored = resume_tailor.tailor_resume("", new_job.__dict__, prof_dict)
+                tailored = resume_tailor.tailor_resume("", new_job.__dict__, profile.__dict__ if profile else prof_dict)
 
                 # 2. Record Application Funnel Entry
                 new_app = Application(

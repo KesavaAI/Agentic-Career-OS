@@ -179,9 +179,9 @@ function MainLayout() {
 
         <PriorityBar
           onNavigateTab={setCurrentTab}
-          applyCount={4}
-          followupCount={3}
-          interviewCount={1}
+          applyCount={counts.jobs > 0 ? Math.min(counts.jobs, 6) : 4}
+          followupCount={counts.followups || 0}
+          interviewCount={counts.interviews || 0}
         />
 
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">

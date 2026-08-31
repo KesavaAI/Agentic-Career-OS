@@ -26,7 +26,7 @@ export const PriorityBar: React.FC<PriorityBarProps> = ({
           TODAY'S MISSION
         </span>
         <p className="text-xs font-medium text-slate-200">
-          Apply to <strong className="text-emerald-400 font-bold">{applyCount} Tier-A {roleName} roles</strong> • Follow up with <strong className="text-teal-400 font-bold">{followupCount} companies</strong> • Prep for <strong className="text-amber-400 font-bold">{interviewCount} upcoming technical interview</strong>
+          Apply to <strong className="text-emerald-400 font-bold">{applyCount} Tier-A {roleName} roles</strong> • Follow up with <strong className="text-teal-400 font-bold">{followupCount} companies</strong> • Prep for <strong className="text-amber-400 font-bold">{interviewCount} upcoming {interviewCount === 1 ? 'interview' : 'interviews'}</strong>
         </p>
       </div>
 

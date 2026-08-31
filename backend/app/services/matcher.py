@@ -21,6 +21,7 @@ class JobMatcher:
             "system_design_match": 88,
             "location_match": 95,
             "salary_potential": 95,
+            "breakdown": json.dumps(match_result.get("breakdown", {})),
             "strengths": json.dumps(match_result["strengths"]),
             "missing_skills": json.dumps(match_result["missing_skills"]),
             "interview_risks": json.dumps([

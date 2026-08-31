@@ -23,25 +23,28 @@ class VideoSessionEvaluationRequest(BaseModel):
     total_duration_seconds: Optional[float] = 300.0
 
 class MercorStartRequest(BaseModel):
-    role: Optional[str] = "Full Stack Engineer"
+    role: Optional[str] = "Full Stack / Web Development"
     company: Optional[str] = "Acme"
+    resume_text: Optional[str] = ""
+    jd_text: Optional[str] = ""
 
 class MercorTurnRequest(BaseModel):
-    role: Optional[str] = "Full Stack Engineer"
+    role: Optional[str] = "Full Stack / Web Development"
     company: Optional[str] = "Acme"
     history: List[Dict[str, Any]] = []
     latest_answer: str
-    whiteboard_code: Optional[str] = ""
+    resume_text: Optional[str] = ""
+    jd_text: Optional[str] = ""
     turn_number: int = 2
 
 class MercorEvaluateRequest(BaseModel):
-    role: Optional[str] = "Full Stack Engineer"
+    role: Optional[str] = "Full Stack / Web Development"
     company: Optional[str] = "Acme"
     turns: List[Dict[str, Any]]
     total_duration_seconds: Optional[float] = 300.0
 
 # =========================================================================
-# 🔬 MERCOR-STYLE AUTONOMOUS AI PANEL & FLYWHEEL ENDPOINTS
+# 🔬 RESUME & JD GROUNDED AI PANEL ENDPOINTS
 # =========================================================================
 
 @router.post("/mercor-start")
@@ -49,16 +52,27 @@ def mercor_start_session(
     req: MercorStartRequest,
     current_user: User = Depends(get_current_user)
 ):
-    user_profile = {
-        "target_role": current_user.target_role if current_user else req.role,
-        "skills": ["Python", "FastAPI", "React", "SQL", "PostgreSQL", "Docker", "Redis"],
-        "projects": [{"title": "Enterprise Microservice Hub"}, {"title": "Real-Time Telemetry Pipeline"}]
-    }
+    resume_content = req.resume_text or ""
+    if not resume_content and current_user:
+        user_experiences = current_user.experiences if hasattr(current_user, "experiences") and current_user.experiences else []
+        exp_lines = []
+        if isinstance(user_experiences, list):
+            for e in user_experiences:
+                if isinstance(e, dict):
+                    exp_lines.append(f"Project: {e.get('title', e.get('role', ''))} - {e.get('description', '')}")
+        
+        user_skills = current_user.skills if hasattr(current_user, "skills") and current_user.skills else []
+        skills_str = ", ".join(user_skills) if isinstance(user_skills, list) else str(user_skills)
+        resume_content = f"Role: {current_user.target_role or req.role}
+Skills: {skills_str}
+" + "
+".join(exp_lines)
 
     initial = mercor_conversational_engine.generate_initial_question(
-        role=req.role or "Full Stack Engineer",
+        role=req.role or (current_user.target_role if current_user else "Full Stack / Web Development"),
         company=req.company or "Acme",
-        profile=user_profile
+        resume_text=resume_content,
+        jd_text=req.jd_text or ""
     )
     return initial
 
@@ -68,11 +82,12 @@ def mercor_process_turn(
     current_user: User = Depends(get_current_user)
 ):
     next_turn = mercor_conversational_engine.generate_next_turn(
-        target_role=req.role or "Full Stack Engineer",
+        target_role=req.role or "Full Stack / Web Development",
         target_company=req.company or "Acme",
         history=req.history,
         latest_answer=req.latest_answer,
-        whiteboard_code=req.whiteboard_code or "",
+        resume_text=req.resume_text or "",
+        jd_text=req.jd_text or "",
         turn_number=req.turn_number
     )
     return next_turn
@@ -84,13 +99,12 @@ def mercor_evaluate_session(
     current_user: User = Depends(get_current_user)
 ):
     evaluation = mercor_conversational_engine.evaluate_mercor_session(
-        role=req.role or "Full Stack Engineer",
+        role=req.role or "Full Stack / Web Development",
         company=req.company or "Acme",
         turns=req.turns,
         total_duration_seconds=req.total_duration_seconds or 300.0
     )
 
-    # 1. Persist interview session
     try:
         session_rec = InterviewSession(
             user_id=current_user.id if current_user else None,
@@ -108,7 +122,6 @@ def mercor_evaluate_session(
     except Exception as e:
         print(f"Error persisting session: {e}")
 
-    # 2. Closed-Loop Career Flywheel: Auto-seed weak topic into LearningTopics
     try:
         if current_user and evaluation.get("flywheel_remediation"):
             remedy = evaluation["flywheel_remediation"]

@@ -3,7 +3,7 @@ import {
   Sparkles, Play, Video, Mic, Award, CheckCircle2, 
   AlertTriangle, Clock, Volume2, ArrowRight, ShieldAlert,
   Flame, BarChart3, RotateCcw, Target, HelpCircle, FileText,
-  Headphones, MessageSquare, UserCheck, Terminal, ShieldCheck 
+  Headphones, MessageSquare, UserCheck, FileCheck, Briefcase, RefreshCw 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
@@ -15,11 +15,32 @@ export const MockInterviewView: React.FC = () => {
   const [viewState, setViewState] = useState<'readiness' | 'video_arena' | 'diagnostic'>('readiness');
   const [targetCompany, setTargetCompany] = useState('Acme');
   const [targetRole, setTargetRole] = useState(user?.target_role || 'Full Stack / Web Development');
-  const [selectedMode, setSelectedMode] = useState<'video' | 'voice' | 'text'>('video');
+  const [selectedMode, setSelectedMode] = useState<'video' | 'voice'>('video');
+
+  // Dual Resume & JD Context States
+  const [resumeText, setResumeText] = useState('');
+  const [jdText, setJdText] = useState(`Role: Senior Full Stack Engineer
+Key Responsibilities:
+- Design and scale distributed microservices with FastAPI and Node.js.
+- Implement high-throughput caching and database query optimization with Redis and PostgreSQL.
+- Architect resilient event-driven pipelines with Kafka and automated circuit breakers.`);
 
   const [readinessData, setReadinessData] = useState<any>(null);
   const [evaluationReport, setEvaluationReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
+  // Auto-populate resume from user profile on load
+  useEffect(() => {
+    if (user) {
+      const u = user as any;
+      const skillsStr = Array.isArray(u.skills) ? u.skills.join(', ') : (u.skills || 'React, Node.js, Python, PostgreSQL, Docker, Redis');
+      const expStr = Array.isArray(u.experiences) && u.experiences.length > 0 
+        ? u.experiences.map((e: any) => `Project: ${e.title || e.role || 'Production Web App'} - ${e.description || 'Built high-scale web APIs'}`).join('\n')
+        : 'Project: Real-Time SaaS Platform with Redis & PostgreSQL\nProject: Distributed Analytics Pipeline with Kafka';
+
+      setResumeText(`Target Role: ${u.target_role || 'Full Stack Engineer'}\nSkills: ${skillsStr}\n${expStr}`);
+    }
+  }, [user]);
 
   useEffect(() => {
     loadReadiness();
@@ -59,6 +80,8 @@ export const MockInterviewView: React.FC = () => {
       <VideoInterviewArena
         role={targetRole}
         company={targetCompany}
+        resumeText={resumeText}
+        jdText={jdText}
         initialMode={selectedMode}
         onFinishSession={handleFinishVideoSession}
         onCancel={() => setViewState('readiness')}
@@ -96,7 +119,7 @@ export const MockInterviewView: React.FC = () => {
           </span>
           <div>
             <h3 className="font-extrabold text-sm text-slate-100">Super-Mercor Executive AI Panel Simulator</h3>
-            <p className="text-xs text-slate-400">Tag-team evaluation by Sarah Jenkins (VP Talent) & David Vance (Staff Architect)</p>
+            <p className="text-xs text-slate-400">Sarah Jenkins (VP Talent) & David Vance (Staff Architect)</p>
           </div>
         </div>
 
@@ -119,7 +142,7 @@ export const MockInterviewView: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* 🎯 PRE-INTERVIEW READINESS & PANEL BRIEFING */}
+      {/* 🎯 PRE-INTERVIEW READINESS & DUAL RESUME/JD CONTEXT */}
       {/* ========================================================================= */}
       <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6 text-center">
         <div className="space-y-1">
@@ -154,8 +177,49 @@ export const MockInterviewView: React.FC = () => {
             <div>
               <h4 className="text-xs font-black text-slate-100">David Vance</h4>
               <p className="text-[11px] text-blue-300">Staff Principal Architect</p>
-              <p className="text-[10px] text-slate-400">Concurrency, Scale & Whiteboard</p>
+              <p className="text-[10px] text-slate-400">Concurrency, Scale & Failure RCA</p>
             </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 📄 DUAL CONTEXT INPUTS: RESUME + TARGET JOB DESCRIPTION (JD) */}
+        {/* ========================================================================= */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto text-left">
+          {/* Field 1: Candidate Resume / Projects */}
+          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-extrabold text-indigo-300 uppercase flex items-center gap-1.5">
+                <FileCheck className="w-3.5 h-3.5" />
+                <span>Your Resume & Projects:</span>
+              </label>
+              <span className="text-[10px] text-slate-500 font-mono">Parsed by AI</span>
+            </div>
+            <textarea
+              value={resumeText}
+              onChange={e => setResumeText(e.target.value)}
+              placeholder="Paste your resume bullet points or project details..."
+              rows={4}
+              className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 resize-none font-sans"
+            />
+          </div>
+
+          {/* Field 2: Target Job Description (JD) */}
+          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-extrabold text-blue-300 uppercase flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>Target Job Description (JD):</span>
+              </label>
+              <span className="text-[10px] text-slate-500 font-mono">Target Requirements</span>
+            </div>
+            <textarea
+              value={jdText}
+              onChange={e => setJdText(e.target.value)}
+              placeholder="Paste the job description or core requirements..."
+              rows={4}
+              className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none font-sans"
+            />
           </div>
         </div>
 
@@ -163,59 +227,6 @@ export const MockInterviewView: React.FC = () => {
         <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 max-w-sm mx-auto flex items-center justify-between">
           <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Interview Readiness:</span>
           <span className="text-3xl font-black text-emerald-400">{readinessData?.overall_readiness_pct || 76}%</span>
-        </div>
-
-        {/* 5-Dimensional Metrics Breakdown */}
-        <div className="space-y-3 max-w-md mx-auto text-left text-xs font-semibold pt-1">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">Resume & Project Match</span>
-              <span className="font-mono font-bold text-emerald-400">{dims.resume_match_pct}%</span>
-            </div>
-            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${dims.resume_match_pct}%` }} />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">Technical Depth (Scale & Locks)</span>
-              <span className="font-mono font-bold text-blue-400">{dims.technical_depth_pct}%</span>
-            </div>
-            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${dims.technical_depth_pct}%` }} />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">Communication Compression (&lt;90s)</span>
-              <span className="font-mono font-bold text-indigo-400">{dims.communication_clarity_pct}%</span>
-            </div>
-            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${dims.communication_clarity_pct}%` }} />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">STAR Structure & Ownership</span>
-              <span className="font-mono font-bold text-amber-400">{dims.star_answers_pct}%</span>
-            </div>
-            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-              <div className="h-full bg-amber-500 rounded-full" style={{ width: `${dims.star_answers_pct}%` }} />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">Confidence & Delivery</span>
-              <span className="font-mono font-bold text-purple-400">{dims.confidence_delivery_pct}%</span>
-            </div>
-            <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${dims.confidence_delivery_pct}%` }} />
-            </div>
-          </div>
         </div>
 
         {/* Format Selector */}
@@ -233,7 +244,7 @@ export const MockInterviewView: React.FC = () => {
               }`}
             >
               <Video className="w-4 h-4" />
-              <span className="text-xs font-bold">🎥 Video + Whiteboard</span>
+              <span className="text-xs font-bold">🎥 Video Mode</span>
             </button>
 
             <button
@@ -260,7 +271,7 @@ export const MockInterviewView: React.FC = () => {
             <span>[ ENTER EXECUTIVE PANEL BOARDROOM ]</span>
           </button>
           <p className="text-[11px] text-slate-500 mt-2">
-            Sarah & David speak aloud • Real-time Physics Radar & Whiteboard • Stop at any time
+            Grounded in your resume & target JD • Turn off camera anytime • Stop at any turn
           </p>
         </div>
       </div>

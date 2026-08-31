@@ -4,53 +4,101 @@ from typing import Dict, Any, List, Optional
 
 class MercorConversationalEngine:
     """
-    Next-Gen Super-Mercor Autonomous AI Conversational Engine.
-    Engineered for Agentic Career OS with:
-    1. Multi-Interviewer Tag-Team Panel:
-       - Sarah Jenkins (VP Talent & Product): Probes behavioral ownership, business ROI, and communication.
-       - David Vance (Staff Principal Architect): Probes system design, concurrency, database locks, and P99 latency.
-    2. Real-Time Technical Fact-Checking & Math/Physics Radar.
-    3. Dual-Modal Evaluation (Spoken Voice + Live Whiteboard/Code Canvas).
-    4. Closed-Loop Career Flywheel Auto-Remediation.
+    Super-Mercor Autonomous AI Conversational Engine.
+    Deeply integrates both the Candidate's Resume AND the Target Job Description (JD):
+    - Cross-examines candidate's real past projects against the JD's specific requirements.
+    - Probes technical gaps, architecture trade-offs, and behavioral ownership.
+    - Features Multi-Interviewer Tag-Team Panel (Sarah Jenkins & David Vance).
     """
 
     @staticmethod
-    def generate_initial_question(role: str = "Full Stack Engineer", company: str = "Acme", profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        r = (role or "Full Stack").lower()
-        projects = profile.get("projects", []) if profile else []
+    def extract_highlights(resume_text: str, jd_text: str = "") -> Dict[str, Any]:
+        res_clean = (resume_text or "").strip()
+        jd_clean = (jd_text or "").strip()
 
-        if projects and len(projects) > 0:
-            top_proj = projects[0].get("title", "your flagship project")
-            question = f"Welcome! On your profile, I noticed '{top_proj}'. To start us off, walk me through the high-level architecture, the business problem it solved, and your specific individual role."
-        elif "data" in r or "analyst" in r:
-            question = f"Welcome to the session! Walk me through the most critical data pipeline or analytical architecture you designed. What was the business context, and what core technical decisions did you own?"
-        elif "backend" in r or "full stack" in r or "software" in r:
-            question = f"Welcome! Tell me about the most complex backend or full-stack application you built end-to-end. Walk me through the architecture and the most difficult design trade-off you had to navigate."
-        elif "ml" in r or "ai" in r:
-            question = f"Welcome! Walk me through an end-to-end ML or generative AI system you shipped to production. How did you structure the pipeline and handle latency, data drift, and evaluation metrics?"
+        known_techs = [
+            "React", "Node.js", "Python", "FastAPI", "Django", "Flask", "PostgreSQL", "MongoDB",
+            "MySQL", "Redis", "Kafka", "Docker", "Kubernetes", "AWS", "GCP", "Azure", "Next.js",
+            "TypeScript", "JavaScript", "GraphQL", "Java", "Spring Boot", "Go", "Golang", "C++",
+            "SQL", "Pandas", "PyTorch", "TensorFlow", "Spark", "Airflow", "Tailwind", "Elasticsearch"
+        ]
+
+        resume_techs = [tech for tech in known_techs if re.search(r"\b" + re.escape(tech) + r"\b", res_clean, re.IGNORECASE)]
+        jd_techs = [tech for tech in known_techs if re.search(r"\b" + re.escape(tech) + r"\b", jd_clean, re.IGNORECASE)]
+
+        # Extract project lines from resume
+        project_candidates = []
+        for line in res_clean.splitlines():
+            line_str = line.strip()
+            if any(k in line_str.lower() for k in ["project:", "project -", "built", "developed", "architected", "engineered", "system:", "app:"]):
+                cleaned = re.sub(r"^(project:?|projects:?|\*|-|•)\s*", "", line_str, flags=re.IGNORECASE).strip()
+                if 5 <= len(cleaned) <= 60:
+                    project_candidates.append(cleaned)
+
+        if not project_candidates and res_clean:
+            first_line = res_clean.splitlines()[0][:50]
+            if first_line:
+                project_candidates = [first_line]
+
+        return {
+            "resume_projects": project_candidates[:3],
+            "resume_technologies": resume_techs[:8] if resume_techs else ["React", "Python", "PostgreSQL"],
+            "jd_technologies": jd_techs[:8] if jd_techs else (resume_techs[:4] if resume_techs else ["Distributed Systems", "SQL"]),
+            "has_jd": len(jd_clean) > 20
+        }
+
+    @staticmethod
+    def generate_initial_question(
+        role: str = "Full Stack / Web Development",
+        company: str = "Acme",
+        resume_text: str = "",
+        jd_text: str = ""
+    ) -> Dict[str, Any]:
+        highlights = MercorConversationalEngine.extract_highlights(resume_text, jd_text)
+        projects = highlights["resume_projects"]
+        res_techs = highlights["resume_technologies"]
+        jd_techs = highlights["jd_technologies"]
+
+        top_project = projects[0] if projects else "your most recent flagship application"
+        target_skills = ", ".join(jd_techs[:3]) if jd_techs else "the core requirements of this role"
+        user_skills = ", ".join(res_techs[:3]) if res_techs else "your technical stack"
+
+        if highlights["has_jd"] and projects:
+            question = (
+                f"Welcome! In our job requirements for {company}, we place strong emphasis on {target_skills}. "
+                f"On your resume, I noticed you built '{top_project}' with {user_skills}. "
+                f"Walk me through how you architected this system and how the technical decisions you made directly map to the scale and challenges of our role."
+            )
+        elif projects:
+            question = (
+                f"Welcome! I reviewed your resume and noticed your project '{top_project}'. "
+                f"Walk me through the high-level architecture, the core problem it solved, and the hardest technical decision you personally owned."
+            )
         else:
-            question = f"Welcome! Tell me about a flagship technical project you owned end-to-end. What was the goal, and what was your specific individual contribution?"
+            question = (
+                f"Welcome! To kick off our session for the {role} position at {company}, "
+                f"walk me through a flagship technical project from your background, the architecture you designed, and the measurable business impact you delivered."
+            )
 
         return {
             "turn_number": 1,
             "interviewer": "sarah",
             "interviewer_name": "Sarah Jenkins",
             "interviewer_title": "VP of Talent & Product",
-            "phase": "Project Overview & Business Stakes",
+            "phase": "Resume & JD Alignment Overview",
             "depth_level": "Layer 1: Problem Space & Architecture",
             "question": question,
-            "focus_area": "System Architecture & Individual Ownership",
-            "requires_whiteboard": False
+            "focus_area": "Resume Verification & JD Alignment"
         }
 
     @staticmethod
-    def analyze_mercor_telemetry(answer_text: str, whiteboard_code: str = "") -> Dict[str, Any]:
+    def analyze_mercor_telemetry(answer_text: str) -> Dict[str, Any]:
         text = answer_text.strip()
         words = re.findall(r"\b[a-zA-Z0-9.%$'-]+\b", text)
         word_count = len(words)
         text_lower = text.lower()
 
-        if word_count == 0 and not whiteboard_code.strip():
+        if word_count == 0:
             return {
                 "word_count": 0,
                 "ownership_score": 0,
@@ -77,10 +125,10 @@ class MercorConversationalEngine:
         layer2_hits = sum(1 for k in depth_indicators_layer2 if k in text_lower)
         layer3_hits = sum(1 for k in depth_indicators_layer3 if k in text_lower)
 
-        if layer3_hits >= 1 or layer2_hits >= 4 or (whiteboard_code and len(whiteboard_code) > 60):
+        if layer3_hits >= 1 or layer2_hits >= 4:
             depth_level = 3
             depth_label = "Layer 3: Production Scale & Concurrency"
-        elif layer2_hits >= 2 or (whiteboard_code and len(whiteboard_code) > 20):
+        elif layer2_hits >= 2:
             depth_level = 2
             depth_label = "Layer 2: Technical Trade-Offs"
         else:
@@ -103,7 +151,7 @@ class MercorConversationalEngine:
             anomaly_details = "100% uptime is architecturally impossible on a single node without failover clustering."
 
         # 5. Compression
-        if word_count < 25 and not whiteboard_code:
+        if word_count < 25:
             compression_rating = "Too Brief (Expand on details)"
         elif word_count <= 140:
             compression_rating = "Optimal (Compressed & Direct)"
@@ -131,13 +179,16 @@ class MercorConversationalEngine:
         target_company: str,
         history: List[Dict[str, Any]],
         latest_answer: str,
-        whiteboard_code: str,
-        turn_number: int
+        resume_text: str = "",
+        jd_text: str = "",
+        turn_number: int = 2
     ) -> Dict[str, Any]:
-        telemetry = MercorConversationalEngine.analyze_mercor_telemetry(latest_answer, whiteboard_code)
+        telemetry = MercorConversationalEngine.analyze_mercor_telemetry(latest_answer)
         ans_lower = latest_answer.lower()
+        highlights = MercorConversationalEngine.extract_highlights(resume_text, jd_text)
+        jd_techs = highlights["jd_technologies"]
 
-        if not latest_answer.strip() and not whiteboard_code.strip():
+        if not latest_answer.strip():
             return {
                 "turn_number": turn_number,
                 "interviewer": "sarah",
@@ -145,9 +196,8 @@ class MercorConversationalEngine:
                 "interviewer_title": "VP of Talent & Product",
                 "phase": "Audio Verification",
                 "depth_level": "Layer 1",
-                "question": "I didn't catch your response. Could you speak directly into the microphone or sketch your solution in the whiteboard area?",
+                "question": "I didn't catch your response. Could you speak directly into the microphone so we can continue?",
                 "telemetry": telemetry,
-                "requires_whiteboard": False,
                 "coach_note": "Please speak your response clearly into the microphone."
             }
 
@@ -159,7 +209,6 @@ class MercorConversationalEngine:
             next_q = f"Let me jump in here. {telemetry['anomaly_details']} How did you measure that number, or were you reading from local read-replicas or an edge caching layer?"
             phase = "Architecture Physics & Validation"
             depth = "Layer 3: Metric Verification"
-            requires_wb = False
 
         # Case 2: Ownership Probe (Sarah)
         elif telemetry["ownership_score"] < 50:
@@ -169,30 +218,33 @@ class MercorConversationalEngine:
             next_q = "You mentioned 'we' built this system. I want to isolate your individual ownership. What exact modules or endpoints did you personally design and write the code for?"
             phase = "Individual Ownership Probe"
             depth = "Layer 2: Individual Contribution"
-            requires_wb = False
 
-        # Case 3: Technical Deep Dive & Whiteboard Challenge (David)
-        elif turn_number == 2 or any(k in ans_lower for k in ["redis", "cache", "postgres", "sql", "database", "api", "fastapi"]):
+        # Case 3: JD Requirements Cross-Examination (David)
+        elif turn_number == 2:
             interviewer = "david"
             name = "David Vance"
             title = "Staff Principal Architect"
-            if "redis" in ans_lower or "cache" in ans_lower:
-                next_q = "David here. When you introduced caching, how did you handle cache invalidation and cache stampedes? Can you sketch or write your lock/invalidation logic in the whiteboard editor?"
+            if jd_techs and len(jd_techs) > 0:
+                focus_skill = jd_techs[0]
+                next_q = (
+                    f"David here. In our job description, {focus_skill} is a core requirement for our infrastructure. "
+                    f"In your previous work, how have you implemented {focus_skill}, and how did you handle failure recovery and latency optimization?"
+                )
+            elif any(k in ans_lower for k in ["redis", "cache", "postgres", "sql", "database", "api", "fastapi"]):
+                next_q = "David here. When you introduced caching and database queries, how did you handle cache invalidation and prevent connection pool starvation under peak load?"
             else:
-                next_q = "David here. Walk me through your database indexing and query optimization strategy. If traffic increases 10x, how do you prevent connection pool starvation?"
-            phase = "Technical Architecture Deep Dive"
+                next_q = "David here. Walk me through the request lifecycle of your service and how you isolate slow downstream dependencies."
+            phase = "JD Technical Deep Dive"
             depth = "Layer 2: Trade-Offs & Concurrency"
-            requires_wb = True
 
         # Case 4: Concurrency & 10x Production Stress Test (David)
         elif turn_number == 3:
             interviewer = "david"
             name = "David Vance"
             title = "Staff Principal Architect"
-            next_q = f"Let's put this under pressure. Suppose {target_company}'s traffic surges by 10x during a flash sale. Where does this system bottleneck first, and how do your circuit breakers and retry buffers prevent cascading failure?"
+            next_q = f"Let's put this under pressure. Suppose {target_company}'s traffic surges by 10x during a peak event. Where does this system bottleneck first, and how do your circuit breakers and retry buffers prevent cascading failure?"
             phase = "10x Production Stress Test"
             depth = "Layer 3: Concurrency & Resilience"
-            requires_wb = True
 
         # Case 5: Quantified Business ROI & Cross-Functional Impact (Sarah)
         elif turn_number == 4 or telemetry["quantified_metrics_count"] == 0:
@@ -202,7 +254,6 @@ class MercorConversationalEngine:
             next_q = "Sarah jumping back in. What was the measurable business ROI of this implementation? For example, how much did latency decrease, or how many engineering hours and infrastructure dollars were saved?"
             phase = "Business ROI & Quantified Metrics"
             depth = "Layer 2: Business Impact"
-            requires_wb = False
 
         # Case 6: Production Outage & Post-Mortem RCA (David)
         elif turn_number == 5:
@@ -212,7 +263,6 @@ class MercorConversationalEngine:
             next_q = "Tell me about a high-severity production bug or outage that slipped through testing in this project. How did you isolate the root cause and harden the pipeline against regressions?"
             phase = "Production RCA & Troubleshooting"
             depth = "Layer 3: Resilience & Hardening"
-            requires_wb = False
 
         # Case 7: Behavioral Conflict & Leadership (Sarah)
         else:
@@ -222,7 +272,6 @@ class MercorConversationalEngine:
             next_q = "Describe a situation where an engineering lead or product manager strongly disagreed with your technical proposal. How did you defend your proposal with data and reach consensus?"
             phase = "Technical Leadership & Conflict"
             depth = "Behavioral & Decision Defense"
-            requires_wb = False
 
         return {
             "turn_number": turn_number,
@@ -233,7 +282,6 @@ class MercorConversationalEngine:
             "depth_level": depth,
             "question": next_q,
             "telemetry": telemetry,
-            "requires_whiteboard": requires_wb,
             "coach_note": f"Panel Telemetry: {name} asking • {telemetry['ownership_label']} • {telemetry['depth_label']}"
         }
 
@@ -244,7 +292,7 @@ class MercorConversationalEngine:
         turns: List[Dict[str, Any]],
         total_duration_seconds: float = 300.0
     ) -> Dict[str, Any]:
-        valid_turns = [t for t in turns if t.get("answer", "").strip() or t.get("whiteboard_code", "").strip()]
+        valid_turns = [t for t in turns if t.get("answer", "").strip()]
         if not valid_turns:
             return {
                 "overall_score": 45,
@@ -269,26 +317,16 @@ class MercorConversationalEngine:
             }
 
         all_text = " ".join([t.get("answer", "") for t in valid_turns])
-        all_code = " ".join([t.get("whiteboard_code", "") for t in valid_turns])
-        telemetry = MercorConversationalEngine.analyze_mercor_telemetry(all_text, all_code)
+        telemetry = MercorConversationalEngine.analyze_mercor_telemetry(all_text)
 
-        # 1. Ownership Score
         ownership = min(max(telemetry["ownership_score"], 45), 96)
-
-        # 2. Depth Score
         depth_score = 90 if telemetry["depth_level"] == 3 else (78 if telemetry["depth_level"] == 2 else 64)
-
-        # 3. Compression Score
         avg_words_per_turn = telemetry["word_count"] / max(len(valid_turns), 1)
         compression_score = 90 if 40 <= avg_words_per_turn <= 140 else 72
-
-        # 4. Quantified Impact
         impact_score = min(max(60 + (telemetry["quantified_metrics_count"] * 14), 50), 96)
 
-        # Panel Split Scores
         sarah_score = int((ownership * 0.50) + (compression_score * 0.30) + (impact_score * 0.20))
         david_score = int((depth_score * 0.60) + (impact_score * 0.25) + (ownership * 0.15))
-
         overall = int((sarah_score * 0.45) + (david_score * 0.55))
 
         strengths = []
@@ -298,8 +336,6 @@ class MercorConversationalEngine:
             strengths.append("✓ Strong Layer-3 Production Depth (concurrency, distributed locks & trade-offs)")
         if impact_score >= 75:
             strengths.append("✓ Quantified measurable business outcomes (% latency reduction / $ ARR)")
-        if all_code.strip():
-            strengths.append("✓ Effectively utilized dual-modal whiteboard for architectural schema defense")
         if not strengths:
             strengths = ["✓ Clear technical communication", "✓ Responded to panel follow-up challenges"]
 
@@ -343,8 +379,7 @@ class MercorConversationalEngine:
                     "interviewer": t.get("interviewer", "sarah"),
                     "question": t.get("question", ""),
                     "candidate_answer": t.get("answer", ""),
-                    "whiteboard_code": t.get("whiteboard_code", ""),
-                    "telemetry": MercorConversationalEngine.analyze_mercor_telemetry(t.get("answer", ""), t.get("whiteboard_code", ""))
+                    "telemetry": MercorConversationalEngine.analyze_mercor_telemetry(t.get("answer", ""))
                 }
                 for idx, t in enumerate(valid_turns, start=1)
             ]

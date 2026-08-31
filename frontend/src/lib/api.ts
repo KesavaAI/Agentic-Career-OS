@@ -384,10 +384,10 @@ export const api = {
   evaluateVideoSession: (data: { role?: string; company?: string; questions_and_answers: any[]; total_duration_seconds?: number }) =>
     fetchApi<any>('/mock-interview/evaluate-video-session', { method: 'POST', body: JSON.stringify(data) }),
 
-  // 🔬 Mercor-Style Autonomous AI Conversational Engine
-  mercorStart: (data: { role?: string; company?: string }) =>
+  // 🔬 Mercor-Style Autonomous AI Conversational Engine Grounded in Resume + JD
+  mercorStart: (data: { role?: string; company?: string; resume_text?: string; jd_text?: string }) =>
     fetchApi<any>('/mock-interview/mercor-start', { method: 'POST', body: JSON.stringify(data) }),
-  mercorTurn: (data: { role?: string; company?: string; history: any[]; latest_answer: string; whiteboard_code?: string; turn_number: number }) =>
+  mercorTurn: (data: { role?: string; company?: string; history: any[]; latest_answer: string; resume_text?: string; jd_text?: string; turn_number: number }) =>
     fetchApi<any>('/mock-interview/mercor-turn', { method: 'POST', body: JSON.stringify(data) }),
   mercorEvaluate: (data: { role?: string; company?: string; turns: any[]; total_duration_seconds?: number }) =>
     fetchApi<any>('/mock-interview/mercor-evaluate', { method: 'POST', body: JSON.stringify(data) }),

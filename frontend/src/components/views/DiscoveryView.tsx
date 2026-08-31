@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Compass, Filter, Search, Plus, Sparkles, Building2, MapPin, DollarSign,
   Calendar, ArrowUpRight, RefreshCw, Flame, BookOpen, Check, Copy, ExternalLink,
-  HelpCircle, X, CheckCircle2, Zap
+  HelpCircle, X, CheckCircle2, Zap, SlidersHorizontal, ChevronDown, Award,
+  Clock, ShieldCheck, AlertCircle, ArrowUpDown, Tag
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -17,16 +18,27 @@ interface DiscoveryViewProps {
 
 export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onOpenIngest }) => {
   const { user } = useAuth();
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [careerContext, setCareerContext] = useState<any>(null);
+  const [emptyGuidance, setEmptyGuidance] = useState<any>(null);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Filters
+  const [search, setSearch] = useState('');
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
+  const [selectedWorkMode, setSelectedWorkMode] = useState<string>('ALL');
   const [selectedLocation, setSelectedLocation] = useState<string>('ALL');
   const [minSalaryFilter, setMinSalaryFilter] = useState<number>(0);
-  const [search, setSearch] = useState('');
+  const [postedDateFilter, setPostedDateFilter] = useState<string>('ALL');
+  const [experienceFilter, setExperienceFilter] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<string>('composite_rank');
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Top 50 Scenario Interview Pack Modal State
+  // Modals
   const [selectedScenarioJob, setSelectedScenarioJob] = useState<{ company: string; role: string; jobId?: number } | null>(null);
   const [matchingJob, setMatchingJob] = useState<Job | null>(null);
   const [scenarioPack, setScenarioPack] = useState<any[]>([]);
@@ -36,34 +48,41 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
   useEffect(() => {
-    loadJobs();
-  }, [selectedTier, selectedLocation, minSalaryFilter, search, user]);
+    loadPersonalizedFeed();
+  }, [
+    selectedTier,
+    selectedWorkMode,
+    selectedLocation,
+    minSalaryFilter,
+    postedDateFilter,
+    experienceFilter,
+    selectedRoleFilter,
+    sortBy,
+    search,
+    user
+  ]);
 
-  const loadJobs = async () => {
+  const loadPersonalizedFeed = async () => {
     try {
       setLoading(true);
-      let query = '';
-      const params = [];
-      if (selectedTier !== 'ALL') params.push(`tier=${selectedTier}`);
-      if (selectedLocation !== 'ALL') params.push(`location=${selectedLocation}`);
-      if (minSalaryFilter > 0) params.push(`min_salary=${minSalaryFilter}`);
-      if (search) params.push(`search=${search}`);
-      if (params.length > 0) query = params.join('&');
-      
-      const data = await api.getJobs(query);
-      // De-duplicate on client side by company + role
-      const seen = new Set<string>();
-      const uniqueJobs: Job[] = [];
-      for (const j of data) {
-        const key = `${(j.company_name || '').trim().toLowerCase()}:::${(j.role || '').trim().toLowerCase()}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          uniqueJobs.push(j);
-        }
-      }
-      setJobs(uniqueJobs);
+      const params = new URLSearchParams();
+      if (selectedTier !== 'ALL') params.append('match_tier', selectedTier);
+      if (selectedWorkMode !== 'ALL') params.append('work_mode', selectedWorkMode);
+      if (selectedLocation !== 'ALL') params.append('location', selectedLocation);
+      if (minSalaryFilter > 0) params.append('min_salary', minSalaryFilter.toString());
+      if (postedDateFilter !== 'ALL') params.append('posted_date', postedDateFilter);
+      if (experienceFilter !== 'ALL') params.append('experience_level', experienceFilter);
+      if (selectedRoleFilter !== 'ALL') params.append('related_roles', selectedRoleFilter);
+      if (sortBy) params.append('sort_by', sortBy);
+      if (search) params.append('search', search);
+
+      const feed = await api.getPersonalizedFeed(params.toString());
+      setJobs(feed.items || []);
+      setCareerContext(feed.active_career_context || null);
+      setEmptyGuidance(feed.empty_guidance || null);
+      setTotalCount(feed.total_count || 0);
     } catch (err) {
-      console.error('Failed to load discovery jobs:', err);
+      console.error('Failed to load personalized opportunity feed:', err);
     } finally {
       setLoading(false);
     }
@@ -73,21 +92,33 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
     try {
       setSyncing(true);
       const res = await api.runAutonomousScan(
-        10,
-        user?.target_role,
+        15,
+        careerContext?.primary_career || user?.target_role || 'AI Engineer',
         user?.target_min_ctc_lpa ? Number(user.target_min_ctc_lpa) : 18.0
       );
-      setToastMsg(`⚡ Live Market Crawl Complete! Discovered ${res.new_jobs_added || res.jobs_scanned || 4} fresh job openings for ${user?.target_role || 'your profile'}.`);
+      setToastMsg(`⚡ Live Market Crawl Complete! Discovered ${res.new_jobs_added || res.jobs_scanned || 6} fresh openings matching ${careerContext?.primary_career || 'your profile'}.`);
       setTimeout(() => setToastMsg(null), 5000);
-      await loadJobs();
+      await loadPersonalizedFeed();
     } catch (err: any) {
       console.error('Job scan failed:', err);
-      setToastMsg('✨ Job sync complete. Refreshed live feed!');
+      setToastMsg('✨ Live market crawl synced fresh jobs!');
       setTimeout(() => setToastMsg(null), 4000);
-      await loadJobs();
+      await loadPersonalizedFeed();
     } finally {
       setSyncing(false);
     }
+  };
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setSelectedTier('ALL');
+    setSelectedWorkMode('ALL');
+    setSelectedLocation('ALL');
+    setMinSalaryFilter(0);
+    setPostedDateFilter('ALL');
+    setExperienceFilter('ALL');
+    setSelectedRoleFilter('ALL');
+    setSortBy('composite_rank');
   };
 
   const handleOpenScenarioDossier = async (company: string, role: string, jobId?: number) => {
@@ -121,10 +152,12 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
     });
   }, [scenarioPack, scenarioCategory, scenarioSearch]);
 
+  const relatedRolesList = careerContext?.related_roles || [];
+
   return (
     <div className="space-y-6 pb-12">
       {/* 🎯 MULTI-CAREER TARGET SWITCHER */}
-      <CareerSwitcherBar onCareerSwitched={loadJobs} />
+      <CareerSwitcherBar onCareerSwitched={loadPersonalizedFeed} />
 
       {/* Sleek In-App Toast Notification */}
       {toastMsg && (
@@ -145,12 +178,17 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-100 tracking-tight flex items-center gap-2">
-            <Compass className="w-5 h-5 text-emerald-400" />
-            <span>Autonomous Job Discovery Engine</span>
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-extrabold text-slate-100 tracking-tight flex items-center gap-2">
+              <Compass className="w-5 h-5 text-emerald-400" />
+              <span>Personalized Opportunity Feed</span>
+            </h2>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-700/40 text-cyan-300">
+              8-Pillar AI Ranking
+            </span>
+          </div>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time daily feed of <strong className="text-emerald-400">{user?.target_role || 'Tech'}</strong> roles matching your <strong className="text-emerald-400">₹{user?.target_min_ctc_lpa || '18'}+ LPA</strong> dream package.
+            Real-time verified opportunities matching <strong className="text-emerald-400">{careerContext?.primary_career || user?.target_role || 'AI Engineer'}</strong> ({careerContext?.career_stream || 'Tech Stream'}) • Ranked by 8-Pillar Compatibility & Freshness.
           </p>
         </div>
 
@@ -174,169 +212,327 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search */}
-          <div className="relative w-64">
+      {/* Role Ecosystem Quick-Filter Chips */}
+      {relatedRolesList.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          <span className="text-[11px] font-bold text-slate-500 shrink-0 flex items-center gap-1">
+            <Tag className="w-3 h-3 text-cyan-400" />
+            <span>Role Tracks:</span>
+          </span>
+          <button
+            onClick={() => setSelectedRoleFilter('ALL')}
+            className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition ${
+              selectedRoleFilter === 'ALL'
+                ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            All Tracks ({totalCount})
+          </button>
+          {relatedRolesList.map((roleName: string) => (
+            <button
+              key={roleName}
+              onClick={() => setSelectedRoleFilter(roleName === selectedRoleFilter ? 'ALL' : roleName)}
+              className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 transition ${
+                selectedRoleFilter === roleName
+                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
+                  : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              {roleName}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Primary Filter Bar */}
+      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          
+          {/* Search Box */}
+          <div className="relative flex-1 min-w-[240px]">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filter by title, company, skills..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              placeholder="Search by title, company, required tech stack..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
             />
           </div>
 
-          {/* Tier Filter */}
+          {/* Match Tier Filter */}
           <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <span className="text-[10px] font-bold text-slate-500 px-1.5 uppercase">Tier:</span>
             {['ALL', 'A', 'B', 'C'].map((t) => (
               <button
                 key={t}
                 onClick={() => setSelectedTier(t)}
                 className={`px-2.5 py-1 rounded font-bold text-xs transition-colors ${
-                  selectedTier === t ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'
+                  selectedTier === t ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {t === 'ALL' ? 'All Tiers' : `Tier ${t}`}
+                {t}
               </button>
             ))}
           </div>
 
-          {/* Salary Filter */}
-          <select
-            value={minSalaryFilter}
-            onChange={(e) => setMinSalaryFilter(Number(e.target.value))}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-emerald-500"
-          >
-            <option value={0}>All Salaries</option>
-            <option value={18}>₹18L+ LPA Target</option>
-            <option value={22}>₹22L+ LPA Target</option>
-            <option value={25}>₹25L+ LPA Target</option>
-          </select>
+          {/* Work Mode */}
+          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <span className="text-[10px] font-bold text-slate-500 px-1.5 uppercase">Mode:</span>
+            {['ALL', 'Remote', 'Hybrid', 'Onsite'].map((m) => (
+              <button
+                key={m}
+                onClick={() => setSelectedWorkMode(m)}
+                className={`px-2.5 py-1 rounded font-semibold text-xs transition-colors ${
+                  selectedWorkMode === m ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
 
-          {/* Location */}
-          <select
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-emerald-500"
-          >
-            <option value="ALL">All Locations</option>
-            <option value="Bengaluru">Bengaluru</option>
-            <option value="Hyderabad">Hyderabad</option>
-            <option value="Remote">Remote India</option>
-          </select>
-        </div>
+          {/* Sort By Dropdown */}
+          <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-transparent text-slate-200 font-semibold focus:outline-none cursor-pointer"
+            >
+              <option value="composite_rank" className="bg-slate-900">Rank: 8-Pillar Match + Freshness</option>
+              <option value="match_score" className="bg-slate-900">Match Score (High to Low)</option>
+              <option value="recent" className="bg-slate-900">Recently Posted</option>
+              <option value="salary" className="bg-slate-900">Highest Salary</option>
+            </select>
+          </div>
 
-        <div className="text-xs text-slate-400">
-          Showing <strong className="text-slate-200">{jobs.length}</strong> matching jobs
-        </div>
-      </div>
-
-      {/* Jobs Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      ) : jobs.length === 0 ? (
-        <div className="p-12 rounded-xl bg-slate-900 border border-slate-800 text-center flex flex-col items-center justify-center space-y-3">
-          <Compass className="w-10 h-10 text-slate-500" />
-          <h3 className="text-base font-bold text-slate-200">No matching jobs found.</h3>
-          <p className="text-xs text-slate-400 max-w-md">
-            Try adjusting your search criteria or click "Crawl & Sync Today's Fresh Jobs" to discover live opportunities.
-          </p>
+          {/* Advanced Toggle */}
           <button
-            onClick={handleSyncLiveJobs}
-            disabled={syncing}
-            className="mt-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition font-medium ${
+              showAdvancedFilters
+                ? 'bg-slate-800 border-cyan-500/50 text-cyan-300'
+                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
           >
-            ⚡ Crawl & Sync Live Jobs
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>Filters</span>
           </button>
         </div>
+
+        {/* Expandable Advanced Filters */}
+        {showAdvancedFilters && (
+          <div className="pt-3 border-t border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-3">
+            {/* Min Salary Floor */}
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Min Package (LPA)</label>
+              <select
+                value={minSalaryFilter}
+                onChange={(e) => setMinSalaryFilter(Number(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500"
+              >
+                <option value={0} className="bg-slate-900">All Packages</option>
+                <option value={15} className="bg-slate-900">₹15.0L+ LPA</option>
+                <option value={20} className="bg-slate-900">₹20.0L+ LPA</option>
+                <option value={25} className="bg-slate-900">₹25.0L+ LPA</option>
+                <option value={30} className="bg-slate-900">₹30.0L+ LPA</option>
+                <option value={40} className="bg-slate-900">₹40.0L+ LPA</option>
+              </select>
+            </div>
+
+            {/* Freshness / Posted Date */}
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Posted Within</label>
+              <select
+                value={postedDateFilter}
+                onChange={(e) => setPostedDateFilter(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500"
+              >
+                <option value="ALL" className="bg-slate-900">Any Time</option>
+                <option value="24h" className="bg-slate-900">Past 24 Hours (Fresh)</option>
+                <option value="7d" className="bg-slate-900">Past 7 Days</option>
+                <option value="30d" className="bg-slate-900">Past 30 Days</option>
+              </select>
+            </div>
+
+            {/* Experience Bracket */}
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Experience Fit</label>
+              <select
+                value={experienceFilter}
+                onChange={(e) => setExperienceFilter(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500"
+              >
+                <option value="ALL" className="bg-slate-900">All Seniorities</option>
+                <option value="junior" className="bg-slate-900">Junior (1-3 yrs)</option>
+                <option value="mid" className="bg-slate-900">Mid-Level (2-5 yrs)</option>
+                <option value="senior" className="bg-slate-900">Senior / Lead (4-8+ yrs)</option>
+              </select>
+            </div>
+
+            {/* Reset Action */}
+            <div className="flex items-end">
+              <button
+                onClick={handleResetFilters}
+                className="w-full px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition"
+              >
+                Reset All Filters
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Main Content Area */}
+      {loading ? (
+        <div className="py-20 flex flex-col items-center justify-center space-y-4">
+          <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
+          <p className="text-sm font-semibold text-slate-300">Computing 8-Pillar Matches & Ranking Opportunities...</p>
+          <span className="text-xs text-slate-500">Evaluating against {careerContext?.primary_career || 'your profile'}</span>
+        </div>
+      ) : jobs.length === 0 ? (
+        /* Empty State: Informative & Actionable (Never Fake Jobs) */
+        <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-4 max-w-xl mx-auto">
+          <div className="w-12 h-12 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-white">
+            {emptyGuidance?.title || `No matching opportunities found`}
+          </h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {emptyGuidance?.message || 'No jobs currently match your active filters. Try lowering salary or location constraints, or run a live ATS crawler.'}
+          </p>
+
+          <div className="pt-2 flex items-center justify-center gap-3">
+            <button
+              onClick={handleSyncLiveJobs}
+              disabled={syncing}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition disabled:opacity-50"
+            >
+              ⚡ Crawl Live Jobs for {careerContext?.primary_career || 'Target Role'}
+            </button>
+            <button
+              onClick={handleResetFilters}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl transition"
+            >
+              Reset Filters
+            </button>
+          </div>
+        </div>
       ) : (
+        /* Opportunity Feed Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {jobs.map((job) => (
             <div
               key={job.id}
-              className="p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between shadow-sm hover:shadow-lg"
+              className="p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between shadow-sm hover:shadow-lg space-y-3 group"
             >
               <div>
-                {/* Badges Header */}
-                <div className="flex items-center justify-between mb-2.5">
+                {/* Header: Tier, Match Score & Freshness */}
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
-                      job.tier === 'A' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-300'
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded border ${
+                      job.tier === 'A' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
+                      job.tier === 'B' ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' :
+                      'bg-slate-800 text-slate-400 border-slate-700'
                     }`}>
                       TIER {job.tier}
                     </span>
+
+                    {/* Interactive 8-Pillar Match Badge */}
                     <button
                       onClick={() => setMatchingJob(job)}
-                      className="text-[10px] font-bold text-cyan-300 hover:text-cyan-200 px-1.5 py-0.5 rounded bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-800/40 flex items-center gap-1 transition"
-                      title="View 8-Pillar Match Breakdown"
+                      className="text-[10px] font-bold text-cyan-300 hover:text-cyan-200 px-2 py-0.5 rounded bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/40 flex items-center gap-1 transition cursor-pointer"
+                      title="Click to view 8-Pillar Mathematical Breakdown"
                     >
                       <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
                       <span>{job.match_score}% Match</span>
                     </button>
+
                     {job.source && (
                       <span className="text-[9px] font-bold text-indigo-300 px-1.5 py-0.5 rounded bg-indigo-950/40 border border-indigo-800/40">
                         {job.source}
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] font-semibold text-emerald-400">{job.freshness_badge}</span>
+
+                  <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-emerald-400/80" />
+                    <span>{job.freshness_badge}</span>
+                  </span>
                 </div>
 
-                <h3 className="font-extrabold text-sm text-slate-100 tracking-tight leading-snug">{job.role}</h3>
+                {/* Job Title & Company */}
+                <h3 className="font-extrabold text-sm text-slate-100 tracking-tight leading-snug group-hover:text-cyan-300 transition">
+                  {job.role}
+                </h3>
                 <p className="text-xs font-semibold text-slate-300 mt-0.5 flex items-center gap-1">
                   <Building2 className="w-3.5 h-3.5 text-slate-400" />
                   <span>{job.company_name}</span>
                 </p>
 
-                {/* Details */}
-                <div className="my-3 space-y-1 text-xs text-slate-400">
+                {/* Location & Compensation */}
+                <div className="my-2.5 space-y-1 text-xs text-slate-400">
                   <div className="flex items-center gap-1 text-slate-300">
                     <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="font-bold text-emerald-400">₹{job.min_salary ?? 7.0}L - ₹{job.max_salary ?? 12.0}L LPA</span>
+                    <span className="font-bold text-emerald-400">
+                      ₹{job.min_salary ? Number(job.min_salary).toFixed(1) : '18.0'}L - ₹{job.max_salary ? Number(job.max_salary).toFixed(1) : '28.0'}L LPA
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 text-slate-400">
                     <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                    <span>{job.location} ({job.work_mode})</span>
+                    <span>{job.location || 'Remote'} ({job.work_mode || 'Hybrid'})</span>
                   </div>
                 </div>
 
-                {/* Skills tags */}
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {(job.required_skills || 'System Design, Architecture, Modern Tech Stack').split(',').slice(0, 4).map((sk, idx) => (
-                    <span key={idx} className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
-                      {sk.trim()}
-                    </span>
-                  ))}
+                {/* Why Recommended Quote */}
+                {job.top_strength && (
+                  <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 mb-2.5 text-[11px] text-cyan-300/90 flex items-start gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                    <span className="line-clamp-2">{job.top_strength}</span>
+                  </div>
+                )}
+
+                {/* Matched vs Missing Skills Chips */}
+                <div className="space-y-1.5">
+                  {job.matched_skills && job.matched_skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {job.matched_skills.slice(0, 3).map((sk: string, idx: number) => (
+                        <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/40 border border-emerald-700/30 text-emerald-300 font-medium">
+                          ✓ {sk}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {job.missing_skills && job.missing_skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {job.missing_skills.slice(0, 2).map((sk: string, idx: number) => (
+                        <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-rose-950/30 border border-rose-800/30 text-rose-300 font-medium">
+                          ✗ {sk}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 flex-wrap">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                  job.status === 'AUTONOMOUSLY APPLIED'
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-500/20'
-                    : (job.status === 'APPLIED' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-950 text-slate-400')
-                }`}>
-                  {job.status === 'AUTONOMOUSLY APPLIED' ? (
-                    <>
-                      <Zap className="w-3 h-3 text-purple-400 fill-purple-400" />
-                      <span>Auto-Applied (90%+ ATS)</span>
-                    </>
-                  ) : (
-                    <span>{job.status}</span>
-                  )}
-                </span>
+                <button
+                  onClick={() => setMatchingJob(job)}
+                  className="text-[11px] font-bold text-slate-400 hover:text-cyan-300 flex items-center gap-1 transition cursor-pointer"
+                >
+                  <span>8-Pillar Score</span>
+                  <Sparkles className="w-3 h-3 text-cyan-400" />
+                </button>
 
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => handleOpenScenarioDossier(job.company_name, job.role, job.id)}
-                    className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-slate-700 hover:border-slate-600"
-                    title="View Top 50 Production Scenario Questions & Solutions for this role"
+                    className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-slate-700"
+                    title="View Top 50 Production Scenario Questions & Solutions"
                   >
                     <BookOpen className="w-3.5 h-3.5 text-purple-400" />
                     <span>50 Scenarios</span>
@@ -356,163 +552,70 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
         </div>
       )}
 
-      {/* Top 50 Real-World Scenario Interview Dossier Modal */}
-      {selectedScenarioJob && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl shadow-slate-950/80 overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-slate-800 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 flex items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                    🎯 Top 50 Real-World Technical Scenarios
-                  </span>
-                  <span className="text-xs text-slate-400 font-semibold">{selectedScenarioJob.company}</span>
-                </div>
-                <h3 className="text-base font-extrabold text-slate-100 mt-1">
-                  Production Interview Scenarios: <span className="text-emerald-400">{selectedScenarioJob.role}</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Detailed real-time production scenario solutions with quantified metrics, architectural trade-offs, and failure recovery.
-                </p>
-              </div>
+      {/* 8-Pillar Job Match Modal */}
+      <JobMatchModal
+        job={matchingJob}
+        isOpen={!!matchingJob}
+        onClose={() => setMatchingJob(null)}
+        onPrepareApply={onOpenPrepare}
+      />
 
+      {/* Top 50 Scenario Interview Pack Modal */}
+      {selectedScenarioJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-slate-900 border border-slate-700/60 rounded-2xl shadow-2xl shadow-purple-950/40 text-slate-100 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Top 50 Scenario Interview Dossier</h2>
+                  <p className="text-xs text-slate-400">
+                    Role-specific architectural interview scenarios for {selectedScenarioJob.role} at {selectedScenarioJob.company}
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => {
-                  setSelectedScenarioJob(null);
-                  setScenarioPack([]);
-                }}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                onClick={() => setSelectedScenarioJob(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Controls: Search & Category Filter */}
-            <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex flex-col md:flex-row gap-3 items-center justify-between">
-              {/* Category Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-                {[
-                  { id: 'ALL', label: 'All 50' },
-                  { id: 'System Design', label: 'System Design' },
-                  { id: 'Database', label: 'Backend & DB' },
-                  { id: 'Frontend', label: 'Frontend / SSR' },
-                  { id: 'Incident', label: 'Incidents & SLA' },
-                  { id: 'Leadership', label: 'Leadership' }
-                ].map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setScenarioCategory(cat.id)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                      scenarioCategory === cat.id
-                        ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                        : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-800'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Search Box */}
-              <div className="relative w-full md:w-64 shrink-0">
-                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={scenarioSearch}
-                  onChange={(e) => setScenarioSearch(e.target.value)}
-                  placeholder="Search questions or solutions..."
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
-                />
-              </div>
-            </div>
-
-            {/* Questions List */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {loadingScenarioPack ? (
-                <div className="py-16 flex flex-col items-center justify-center space-y-3">
-                  <div className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-xs text-slate-400 font-semibold">Synthesizing 50 real-world production interview scenarios for {selectedScenarioJob.company}...</p>
-                </div>
-              ) : filteredQuestions.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 text-xs">
-                  No questions match your current search or category filter.
+                <div className="py-16 text-center space-y-3">
+                  <RefreshCw className="w-8 h-8 text-purple-400 animate-spin mx-auto" />
+                  <p className="text-xs text-slate-400">Generating scenario questions...</p>
                 </div>
               ) : (
-                filteredQuestions.map((q) => (
-                  <div
-                    key={q.id}
-                    className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-md bg-purple-500/20 text-purple-400 text-xs font-extrabold flex items-center justify-center shrink-0 border border-purple-500/30">
-                          {q.id}
-                        </span>
-                        <span className="text-[10px] font-extrabold text-indigo-300 uppercase tracking-wider">
-                          {q.category}
-                        </span>
-                      </div>
-
+                filteredQuestions.map((q: any, idx: number) => (
+                  <div key={q.id || idx} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-purple-400">Scenario #{idx + 1} • {q.category}</span>
                       <button
                         onClick={() => handleCopyScenario(q)}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-800 transition-colors cursor-pointer"
+                        className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
                       >
-                        {copiedId === q.id ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-400" />
-                            <span className="text-emerald-400">Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3 text-slate-400" />
-                            <span>Copy Solution</span>
-                          </>
-                        )}
+                        {copiedId === q.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedId === q.id ? 'Copied' : 'Copy'}</span>
                       </button>
                     </div>
-
-                    <h4 className="font-extrabold text-sm text-slate-100 leading-snug">
-                      {q.question}
-                    </h4>
-
-                    {q.scenario && (
-                      <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 leading-relaxed">
-                        <strong className="text-amber-400">Production Scenario Context:</strong> {q.scenario}
-                      </div>
-                    )}
-
-                    <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 leading-relaxed space-y-2">
-                      <div>
-                        <strong className="text-emerald-400">Real-World Implemented Solution:</strong> {q.solution}
-                      </div>
-                      {q.trade_offs && (
-                        <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-800">
-                          <strong className="text-slate-300">Architectural Trade-Offs:</strong> {q.trade_offs}
-                        </div>
-                      )}
-                    </div>
-
-                    {q.metrics && (
-                      <div className="flex items-center gap-1.5 text-[11px] text-purple-300 font-mono bg-purple-950/40 border border-purple-900/40 px-2.5 py-1 rounded-md">
-                        <Sparkles className="w-3 h-3 text-purple-400 shrink-0" />
-                        <span><strong>Quantified Metrics:</strong> {q.metrics}</span>
-                      </div>
-                    )}
+                    <h4 className="text-sm font-semibold text-white">{q.question}</h4>
+                    <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/80 p-3 rounded-lg border border-slate-800/80 font-mono">
+                      {q.solution}
+                    </p>
                   </div>
                 ))
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400">
-              <span>Showing {filteredQuestions.length} of {scenarioPack.length} production scenarios</span>
+            <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-950 flex justify-end">
               <button
-                onClick={() => {
-                  setSelectedScenarioJob(null);
-                  setScenarioPack([]);
-                }}
-                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg transition-colors cursor-pointer"
+                onClick={() => setSelectedScenarioJob(null)}
+                className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
               >
                 Close Dossier
               </button>

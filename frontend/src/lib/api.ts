@@ -275,6 +275,7 @@ export const api = {
   evaluateJobMatch: (data: { job_dict?: any; job_id?: number; profile_override?: any }) =>
     fetchApi<any>('/jobs/match', { method: 'POST', body: JSON.stringify(data) }),
   recalculateMatches: () => fetchApi<any>('/jobs/recalculate-matches', { method: 'POST' }),
+  getPersonalizedFeed: (params?: string) => fetchApi<any>(`/discovery/feed${params ? `?${params}` : ''}`),
 
   // Applications
   getApplications: () => fetchApi<any[]>('/applications'),

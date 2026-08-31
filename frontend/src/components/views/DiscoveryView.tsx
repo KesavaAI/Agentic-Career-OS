@@ -1,3 +1,4 @@
+import { CareerSwitcherBar } from '../layout/CareerSwitcherBar';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Compass, Filter, Search, Plus, Sparkles, Building2, MapPin, DollarSign,
@@ -120,6 +121,9 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
 
   return (
     <div className="space-y-6 pb-12">
+      {/* 🎯 MULTI-CAREER TARGET SWITCHER */}
+      <CareerSwitcherBar onCareerSwitched={loadJobs} />
+
       {/* Sleek In-App Toast Notification */}
       {toastMsg && (
         <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-900/90 to-indigo-900/90 border border-purple-500/40 text-purple-100 text-xs shadow-xl shadow-purple-950/50 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">

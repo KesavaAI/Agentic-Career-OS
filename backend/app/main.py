@@ -7,6 +7,7 @@ from app.models import *
 from app.services.seed_service import seed_service
 from app.services.security_middleware import SecurityHeadersMiddleware
 from app.routers import (
+    taxonomy,
     auth, profile, jobs, applications, companies, recruiters,
     resumes, projects, interviews, mock_interview, learning,
     market, analytics, followups, offers, notifications,

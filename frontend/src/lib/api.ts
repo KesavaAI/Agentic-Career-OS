@@ -352,6 +352,11 @@ export const api = {
     fetchApi<any>('/career-agent/directive', { method: 'POST', body: JSON.stringify({ directive }) }),
   getSwarmDagState: () => fetchApi<any>('/career-agent/swarm-dag'),
   executeSwarmCycle: () => fetchApi<any>('/career-agent/swarm-execute', { method: 'POST' }),
+  // Multi-Career Taxonomy & Switching
+  getCareerDomains: () => fetchApi<any[]>('/taxonomy/domains'),
+  getRoleIntelligence: (roleName: string) => fetchApi<any>(`/taxonomy/role/${encodeURIComponent(roleName)}`),
+  switchCareerTarget: (data: { domain_id: string; target_role: string; target_min_ctc_lpa?: number; candidate_pool?: string }) =>
+    fetchApi<any>('/taxonomy/switch-career', { method: 'POST', body: JSON.stringify(data) }),
 
   // Audit & Settings
   getAuditLogs: () => fetchApi<any[]>('/audit'),

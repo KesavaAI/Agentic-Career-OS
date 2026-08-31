@@ -1,3 +1,4 @@
+import { CareerSwitcherBar } from '../layout/CareerSwitcherBar';
 import { AgentFleetHUD } from '../agent/AgentFleetHUD';
 import React, { useState, useEffect } from 'react';
 import {
@@ -305,6 +306,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab, onO
 
             {/* 🛸 1. UNIVERSAL AGENT FLEET STATUS & NATURAL LANGUAGE DIRECTIVE TERMINAL */}
       <AgentFleetHUD onDirectiveApplied={loadDashboardData} onNavigateTab={onNavigateTab} />
+
+      {/* 🎯 MULTI-CAREER TARGET SWITCHER */}
+      <CareerSwitcherBar onCareerSwitched={loadDashboardData} />
 
       {/* 🚀 8-PILLAR AUTOPILOT WORKFLOW RIBBON */}
       <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md">

@@ -1,3 +1,5 @@
+from app.models.project import Project
+from app.models.resume import Resume
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta

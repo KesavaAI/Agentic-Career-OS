@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.database import get_db
 from app.models.followup import FollowUp
 from app.models.application import Application
@@ -24,14 +24,18 @@ def sync_active_application_followups(db: Session, current_user: Optional[User] 
     for app in apps:
         existing = db.query(FollowUp).filter(FollowUp.company_name == app.company_name).first()
         if not existing:
-            fu_date = (app.applied_date or now) + timedelta(days=3)
+            app_date = app.applied_date
+            if app_date and hasattr(app_date, 'tzinfo') and app_date.tzinfo is not None:
+                app_date = app_date.replace(tzinfo=None)
+            
+            fu_date = (app_date or now) + timedelta(days=3)
             new_fu = FollowUp(
                 application_id=app.id,
                 user_id=current_user.id if current_user else None,
                 company_name=app.company_name,
                 role_title=app.role_title,
-                applied_date=app.applied_date or now - timedelta(days=3),
-                follow_up_date=fu_date if fu_date > now else now,
+                applied_date=app_date or now - timedelta(days=3),
+                follow_up_date=fu_date,
                 response_status="Pending Response",
                 action_notes=f"1-Click Outreach: Inquire on status of {app.role_title} application at {app.company_name} with technical portfolio highlight.",
                 is_completed=False
@@ -48,8 +52,10 @@ def list_followups(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user)
 ):
-    # Auto-synchronize followups from active applications
-    sync_active_application_followups(db, current_user)
+    try:
+        sync_active_application_followups(db, current_user)
+    except Exception as e:
+        print(f"Error in sync_active_application_followups: {e}")
 
     query = db.query(FollowUp)
     now = datetime.utcnow()

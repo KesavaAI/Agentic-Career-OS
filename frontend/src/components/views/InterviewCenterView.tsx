@@ -12,11 +12,27 @@ interface InterviewCenterViewProps {
 }
 
 export const InterviewCenterView: React.FC<InterviewCenterViewProps> = ({ onNavigateTab }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'scenarios' | 'resume_defense' | 'pipeline'>('scenarios');
+  const [activeSubTab, setActiveSubTab] = useState<'dossier' | 'scenarios' | 'resume_defense' | 'pipeline'>('dossier');
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [selectedPack, setSelectedPack] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Executive Company Dossier State
+  const [dossierData, setDossierData] = useState<any | null>(null);
+  const [loadingDossier, setLoadingDossier] = useState(false);
+
+  const loadExecutiveDossier = async (comp: string, role: string) => {
+    try {
+      setLoadingDossier(true);
+      const res = await api.getExecutiveCompanyDossier(comp, role);
+      setDossierData(res);
+    } catch (err) {
+      console.error('Failed to load dossier:', err);
+    } finally {
+      setLoadingDossier(false);
+    }
+  };
 
   // Active Company Selection
   const [selectedCompany, setSelectedCompany] = useState<string>('Zepto');
@@ -88,6 +104,7 @@ export const InterviewCenterView: React.FC<InterviewCenterViewProps> = ({ onNavi
       setSelectedCompany(initialCompany);
       setSelectedRole(initialRole || 'Full Stack Engineer');
 
+      loadExecutiveDossier(initialCompany, initialRole || 'Full Stack Engineer');
       loadScenarioPack(initialCompany, initialRole || 'Full Stack Engineer');
       loadResumeDefense();
       if (intData && intData.length > 0) {
@@ -203,6 +220,21 @@ export const InterviewCenterView: React.FC<InterviewCenterViewProps> = ({ onNavi
         <div className="flex items-center gap-2 flex-wrap">
           {/* Sub-Tab Navigation */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1">
+            <button
+              onClick={() => {
+                setActiveSubTab('dossier');
+                loadExecutiveDossier(selectedCompany, selectedRole);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeSubTab === 'dossier'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-cyan-300" />
+              <span>Executive 1-Page Dossier</span>
+            </button>
+
             <button
               onClick={() => setActiveSubTab('scenarios')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${

@@ -391,5 +391,30 @@ export const api = {
     cycle_interval_minutes?: number;
   }) => fetchApi<any>('/career-agent/autopilot/settings', { method: 'POST', body: JSON.stringify(data) }),
   getAutopilotLogs: (limit?: number) => fetchApi<any>(`/career-agent/autopilot/logs?limit=${limit || 50}`),
-  triggerAutopilotCycle: () => fetchApi<any>('/career-agent/autopilot/trigger-now', { method: 'POST' })
+  triggerAutopilotCycle: () => fetchApi<any>('/career-agent/autopilot/trigger-now', { method: 'POST' }),
+
+  // 🎯 Autonomous Recruiter Headhunter
+  getVerifiedRecruiters: () => fetchApi<any[]>('/recruiters/headhunter/verified-targets'),
+  generateRecruiterPitch: (data: { recruiter_name: string; company_name: string; recruiter_role?: string; candidate_skills?: string; candidate_projects?: string }) =>
+    fetchApi<any>('/recruiters/headhunter/generate-pitch', { method: 'POST', body: JSON.stringify(data) }),
+
+  // 🏢 Autonomous Executive Company Dossier
+  getExecutiveCompanyDossier: (companyName: string, role?: string) =>
+    fetchApi<any>(`/interviews/dossier/${encodeURIComponent(companyName)}?role=${encodeURIComponent(role || '')}`),
+
+  // 💰 Autonomous Multi-Offer & Counter-Offer Negotiator
+  generateCounterOfferPlaybook: (data: {
+    company_name: string;
+    role_title: string;
+    offered_base_lpa: number;
+    offered_variable_lpa?: number;
+    offered_esops_lpa?: number;
+    offered_joining_bonus_lpa?: number;
+    competing_offers_count?: number;
+    competing_highest_ctc_lpa?: number;
+  }) => fetchApi<any>('/offers/negotiate', { method: 'POST', body: JSON.stringify(data) }),
+
+  // 📱 Autonomous Mobile Notification Gateway
+  sendTestMobileAlert: (data: { title: string; message: string; priority?: string; webhook_url?: string }) =>
+    fetchApi<any>('/notifications/mobile/test-alert', { method: 'POST', body: JSON.stringify(data) })
 };

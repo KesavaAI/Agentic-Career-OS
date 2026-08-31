@@ -1,94 +1,57 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from pydantic import BaseModel
+
 from app.database import get_db
 from app.models.recruiter import Recruiter
-from app.schemas.recruiter import RecruiterOut, RecruiterCreate, RecruiterUpdate, OutreachTemplateRequest
+from app.models.user import User
+from app.dependencies import get_current_user
+from app.schemas.recruiter import RecruiterCreate, RecruiterUpdate, RecruiterOut
+from app.services.recruiter_headhunter_agent import recruiter_headhunter_agent
 
 router = APIRouter(prefix="/recruiters", tags=["Recruiters"])
 
+class HeadhunterPitchRequest(BaseModel):
+    recruiter_name: str
+    company_name: str
+    recruiter_role: Optional[str] = "Hiring Manager"
+    candidate_skills: Optional[str] = None
+    candidate_projects: Optional[str] = None
+
 @router.get("", response_model=List[RecruiterOut])
-def list_recruiters(db: Session = Depends(get_db)):
-    return db.query(Recruiter).order_by(Recruiter.created_at.desc()).all()
+def list_recruiters(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
+    return db.query(Recruiter).offset(skip).limit(limit).all()
+
+@router.get("/headhunter/verified-targets")
+def get_verified_hiring_managers():
+    """Returns curated tier-1 engineering hiring managers and technical recruiters."""
+    return recruiter_headhunter_agent.DEFAULT_RECRUITERS
+
+@router.post("/headhunter/generate-pitch")
+def generate_recruiter_pitch(
+    req: HeadhunterPitchRequest,
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """Synthesizes high-conversion 3-sentence cold outreach email for target hiring manager."""
+    cand_name = current_user.full_name if current_user else "Candidate"
+    cand_role = (current_user.target_role if current_user else None) or "Full Stack / Distributed Systems Engineer"
+
+    result = recruiter_headhunter_agent.generate_personalized_pitch(
+        recruiter_name=req.recruiter_name,
+        company_name=req.company_name,
+        recruiter_role=req.recruiter_role or "Hiring Manager",
+        candidate_name=cand_name,
+        candidate_role=cand_role,
+        candidate_skills=req.candidate_skills,
+        candidate_projects=req.candidate_projects
+    )
+    return result
 
 @router.post("", response_model=RecruiterOut)
-def create_recruiter(req: RecruiterCreate, db: Session = Depends(get_db)):
-    rec = Recruiter(**req.dict())
-    db.add(rec)
+def create_recruiter(recruiter_in: RecruiterCreate, db: Session = Depends(get_db)):
+    db_recruiter = Recruiter(**recruiter_in.dict())
+    db.add(db_recruiter)
     db.commit()
-    db.refresh(rec)
-    return rec
-
-@router.put("/{rec_id}", response_model=RecruiterOut)
-def update_recruiter(rec_id: int, req: RecruiterUpdate, db: Session = Depends(get_db)):
-    rec = db.query(Recruiter).filter(Recruiter.id == rec_id).first()
-    if not rec:
-        raise HTTPException(status_code=404, detail="Recruiter not found")
-    for key, val in req.dict(exclude_unset=True).items():
-        setattr(rec, key, val)
-    db.commit()
-    db.refresh(rec)
-    return rec
-
-@router.post("/template")
-def get_outreach_template(req: OutreachTemplateRequest):
-    r_name = req.recruiter_name or "Hiring Team"
-    comp = req.company_name or "Company"
-    role = req.role_title or "GenAI / Agentic AI Engineer"
-    
-    if req.template_type == "outreach":
-        subject = f"GenAI / Agentic AI Engineer - Application for {role} at {comp}"
-        body = f"""Hi {r_name},
-
-I hope this message finds you well.
-
-I recently noticed the {role} opportunity at {comp} and wanted to reach out directly. Over the past ~1.6 years at Tata Consultancy Services (TCS), I specialized in production GenAI and Agentic AI systems—specifically architecting our enterprise Agentic Data Intelligence platform with LangGraph, RAG pipelines, Azure OpenAI, and FastAPI.
-
-My hands-on experience in building deterministic stateful agents and optimizing vector search latency aligns strongly with {comp}'s mission. I would love the chance to connect briefly regarding this role.
-
-Best regards,
-Kesava
-[LinkedIn](https://linkedin.com/in/kesava-ai) | [GitHub](https://github.com/kesava-ai)
-"""
-    elif req.template_type == "followup":
-        subject = f"Following up on {role} Application - Kesava"
-        body = f"""Hi {r_name},
-
-I hope you're having a great week.
-
-I wanted to follow up on my recent application for the {role} position at {comp}. I remain very enthusiastic about the opportunity to bring my LangGraph and Azure OpenAI engineering background to your team.
-
-Please let me know if you need any additional portfolio artifacts or details from my end.
-
-Warm regards,
-Kesava
-"""
-    elif req.template_type == "thank_you":
-        subject = f"Thank you for the conversation today - {comp} {role}"
-        body = f"""Hi {r_name},
-
-Thank you for taking the time to speak with me today regarding the {role} role at {comp}. I really enjoyed learning more about the engineering challenges and roadmap.
-
-Our discussion reinforced my enthusiasm for joining the team and applying my background in multi-agent orchestration and low-latency RAG architectures.
-
-Looking forward to the next steps!
-
-Best regards,
-Kesava
-"""
-    else:
-        subject = f"Availability for Interview - {role} at {comp}"
-        body = f"""Hi {r_name},
-
-Thank you for reaching out! I am very excited to proceed to the next round for the {role} position.
-
-Here is my availability for the upcoming week (IST):
-- Monday / Tuesday: 10:00 AM - 01:00 PM, 04:00 PM - 07:00 PM
-- Wednesday / Thursday: 11:00 AM - 02:00 PM, 05:00 PM - 08:00 PM
-
-Looking forward to speaking with the team.
-
-Best regards,
-Kesava
-"""
-    return {"subject": subject, "body": body}
+    db.refresh(db_recruiter)
+    return db_recruiter

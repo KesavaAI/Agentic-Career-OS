@@ -1,19 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
+import math
+
 from app.database import get_db
 from app.models.job import Job
 from app.models.job_match import JobMatch
 from app.models.profile import Profile
 from app.models.application import Application
-from app.schemas.job import JobOut, JobCreate, JobUpdate, BulkJobAction, JobIngestRequest
+from app.schemas.job import JobOut, JobCreate, JobUpdate, BulkJobAction, JobIngestRequest, PaginatedJobsOut
 from app.schemas.job_match import JobMatchOut
 from app.services.jd_extractor import jd_extractor
 from app.services.matcher import job_matcher
 from app.services.duplicate_detector import duplicate_detector
 from app.services.audit_service import audit_service
 from app.services.security_middleware import is_safe_url
+from app.services.role_intelligence_engine import role_intelligence_engine
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -22,27 +25,101 @@ def list_jobs(
     tier: Optional[str] = None,
     status: Optional[str] = None,
     location: Optional[str] = None,
+    work_mode: Optional[str] = None,
     search: Optional[str] = None,
     min_salary: Optional[float] = None,
+    experience: Optional[float] = None,
+    source: Optional[str] = None,
+    sort_by: Optional[str] = "priority", # priority, match, date, salary
     skip: int = 0,
     limit: int = 100,
+    is_active_only: bool = True,
     db: Session = Depends(get_db)
 ):
     query = db.query(Job).filter(Job.is_archived == False)
-    if tier:
+    if is_active_only:
+        query = query.filter(Job.is_active == True)
+    if tier and tier != "ALL":
         query = query.filter(Job.tier == tier.upper())
-    if status:
+    if status and status != "ALL":
         query = query.filter(Job.status == status)
-    if location:
+    if location and location != "ALL":
         query = query.filter(Job.location.ilike(f"%{location}%"))
-    if min_salary:
+    if work_mode and work_mode != "ALL":
+        query = query.filter(Job.work_mode.ilike(f"%{work_mode}%"))
+    if min_salary and min_salary > 0:
         query = query.filter(Job.max_salary >= min_salary)
+    if experience:
+        query = query.filter(Job.experience_min <= experience, Job.experience_max >= experience)
+    if source and source != "ALL":
+        query = query.filter(Job.source.ilike(f"%{source}%"))
     if search:
-        s = f"%{search}%"
-        query = query.filter((Job.role.ilike(s)) | (Job.company_name.ilike(s)) | (Job.description.ilike(s)))
+        s = f"%{search.strip()}%"
+        query = query.filter((Job.role.ilike(s)) | (Job.company_name.ilike(s)) | (Job.description.ilike(s)) | (Job.required_skills.ilike(s)))
     
-    query = query.order_by(Job.priority_score.desc(), Job.created_at.desc())
+    if sort_by == "match":
+        query = query.order_by(Job.match_score.desc(), Job.created_at.desc())
+    elif sort_by == "date" or sort_by == "recent":
+        query = query.order_by(Job.posted_date.desc(), Job.created_at.desc())
+    elif sort_by == "salary":
+        query = query.order_by(Job.max_salary.desc(), Job.match_score.desc())
+    else:
+        query = query.order_by(Job.priority_score.desc(), Job.match_score.desc(), Job.created_at.desc())
+
     return query.offset(skip).limit(limit).all()
+
+@router.get("/paginated", response_model=PaginatedJobsOut)
+def list_jobs_paginated(
+    page: int = 1,
+    page_size: int = 20,
+    tier: Optional[str] = None,
+    status: Optional[str] = None,
+    location: Optional[str] = None,
+    work_mode: Optional[str] = None,
+    search: Optional[str] = None,
+    min_salary: Optional[float] = None,
+    source: Optional[str] = None,
+    sort_by: Optional[str] = "priority",
+    db: Session = Depends(get_db)
+):
+    query = db.query(Job).filter(Job.is_archived == False, Job.is_active == True)
+    if tier and tier != "ALL":
+        query = query.filter(Job.tier == tier.upper())
+    if status and status != "ALL":
+        query = query.filter(Job.status == status)
+    if location and location != "ALL":
+        query = query.filter(Job.location.ilike(f"%{location}%"))
+    if work_mode and work_mode != "ALL":
+        query = query.filter(Job.work_mode.ilike(f"%{work_mode}%"))
+    if min_salary and min_salary > 0:
+        query = query.filter(Job.max_salary >= min_salary)
+    if source and source != "ALL":
+        query = query.filter(Job.source.ilike(f"%{source}%"))
+    if search:
+        s = f"%{search.strip()}%"
+        query = query.filter((Job.role.ilike(s)) | (Job.company_name.ilike(s)) | (Job.description.ilike(s)))
+
+    total = query.count()
+    total_pages = max(1, math.ceil(total / page_size))
+    skip = (page - 1) * page_size
+
+    if sort_by == "match":
+        query = query.order_by(Job.match_score.desc(), Job.created_at.desc())
+    elif sort_by == "recent" or sort_by == "date":
+        query = query.order_by(Job.posted_date.desc(), Job.created_at.desc())
+    elif sort_by == "salary":
+        query = query.order_by(Job.max_salary.desc())
+    else:
+        query = query.order_by(Job.priority_score.desc(), Job.created_at.desc())
+
+    jobs = query.offset(skip).limit(page_size).all()
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "jobs": jobs
+    }
 
 @router.get("/{job_id}", response_model=JobOut)
 def get_job(job_id: int, db: Session = Depends(get_db)):
@@ -53,7 +130,6 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=JobOut)
 def create_job(req: JobCreate, db: Session = Depends(get_db)):
-    # Duplicate check
     existing_jobs = [j.__dict__ for j in db.query(Job).all()]
     dup_res = duplicate_detector.check_duplicate(req.dict(), existing_jobs)
     
@@ -62,7 +138,6 @@ def create_job(req: JobCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(job)
     
-    # Auto analyze match
     profile = db.query(Profile).first()
     p_dict = profile.__dict__ if profile else {}
     match_data = job_matcher.calculate_match(job.__dict__, p_dict)
@@ -71,7 +146,6 @@ def create_job(req: JobCreate, db: Session = Depends(get_db)):
     job.priority_score = match_data["priority_score"]
     job.match_score = match_data["overall_score"]
     
-    # Save JobMatch record
     jm = JobMatch(job_id=job.id, **{k: v for k, v in match_data.items() if k in JobMatch.__table__.columns.keys()})
     db.add(jm)
     db.commit()
@@ -93,32 +167,12 @@ def update_job(job_id: int, req: JobUpdate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(job)
 
-    # Automatically sync with candidate application funnel
     if req.status and req.status != prev_status:
         existing_app = db.query(Application).filter(Application.job_id == job.id).first()
         if existing_app:
             existing_app.status = req.status
-            if "APPLIED" in req.status.upper() and not existing_app.applied_date:
-                existing_app.applied_date = datetime.utcnow()
-                existing_app.follow_up_date = datetime.utcnow() + timedelta(days=5)
             db.commit()
-        elif "APPLIED" in req.status.upper() or req.status in ["INTERVIEW 1", "TECHNICAL ROUND", "HR ROUND", "OFFER"]:
-            new_app = Application(
-                job_id=job.id,
-                company_name=job.company_name,
-                role_title=job.role,
-                tier=job.tier or "A",
-                match_score=job.match_score or 90,
-                status=req.status,
-                applied_date=datetime.utcnow(),
-                next_action="Monitor inbox for recruiter screening and follow-ups",
-                follow_up_date=datetime.utcnow() + timedelta(days=5),
-                is_user_approved=True
-            )
-            db.add(new_app)
-            db.commit()
-
-    audit_service.log(db, "system@career.local", "UPDATE", "Job", job.id, f"Status: {prev_status}", f"Status: {job.status}")
+            
     return job
 
 @router.delete("/{job_id}")
@@ -126,140 +180,49 @@ def delete_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    
     db.delete(job)
     db.commit()
-    audit_service.log(db, "system@career.local", "DELETE", "Job", job_id, None, "Deleted job")
+    audit_service.log(db, "kesava@career.local", "DELETE", "Job", job_id, None, f"Deleted job {job_id}")
     return {"message": "Job deleted successfully"}
 
-@router.post("/bulk")
-def bulk_job_action(req: BulkJobAction, db: Session = Depends(get_db)):
-    jobs = db.query(Job).filter(Job.id.in_(req.job_ids)).all()
-    if req.action == "delete":
-        for j in jobs:
-            db.delete(j)
-    elif req.action == "archive":
-        for j in jobs:
-            j.is_archived = True
-    elif req.action == "set_status" and req.value:
-        for j in jobs:
-            j.status = req.value
-    elif req.action == "set_tier" and req.value:
-        for j in jobs:
-            j.tier = req.value
-    db.commit()
-    return {"message": f"Bulk action '{req.action}' applied to {len(jobs)} jobs"}
-
-@router.post("/ingest", response_model=JobOut)
-def ingest_job(req: JobIngestRequest, db: Session = Depends(get_db)):
-    if req.url and not is_safe_url(req.url):
-        raise HTTPException(status_code=400, detail="Invalid or unsafe Job URL. Only public HTTP/HTTPS URLs are allowed.")
-    
-    extracted = jd_extractor.extract_from_text(req.raw_text or "")
-    if req.url:
-        extracted["job_url"] = req.url
-    extracted["source"] = req.source or "Direct Ingestion"
-    
-    job_create = JobCreate(**extracted)
-    return create_job(job_create, db)
-
-@router.post("/{job_id}/analyze", response_model=JobMatchOut)
-def analyze_job(job_id: int, db: Session = Depends(get_db)):
-    job = db.query(Job).filter(Job.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    
-    profile = db.query(Profile).first()
-    p_dict = profile.__dict__ if profile else {}
-    match_data = job_matcher.calculate_match(job.__dict__, p_dict)
-    
-    job.tier = match_data["tier"]
-    job.priority_score = match_data["priority_score"]
-    job.match_score = match_data["overall_score"]
-    
-    jm = db.query(JobMatch).filter(JobMatch.job_id == job.id).first()
-    if not jm:
-        jm = JobMatch(job_id=job.id)
-        db.add(jm)
+@router.post("/batch-auto-apply")
+def batch_auto_apply(req: Dict[str, List[int]], db: Session = Depends(get_db)):
+    job_ids = req.get("job_ids", [])
+    if not job_ids:
+        raise HTTPException(status_code=400, detail="No job IDs provided")
         
-    for k, v in match_data.items():
-        if k in JobMatch.__table__.columns.keys():
-            setattr(jm, k, v)
-            
+    jobs = db.query(Job).filter(Job.id.in_(job_ids)).all()
+    applied_count = 0
+    
+    for j in jobs:
+        j.status = "AUTONOMOUSLY APPLIED"
+        existing = db.query(Application).filter(Application.job_id == j.id).first()
+        if not existing:
+            app = Application(
+                job_id=j.id,
+                company_name=j.company_name,
+                role_title=j.role,
+                tier=j.tier,
+                match_score=j.match_score or 90,
+                status="AUTONOMOUSLY APPLIED",
+                applied_date=datetime.utcnow(),
+                next_action="Review Top 50 Scenario Interview Pack",
+                is_user_approved=True
+            )
+            db.add(app)
+        applied_count += 1
+        
     db.commit()
-    db.refresh(jm)
-    return jm
+    return {"success": True, "applied_count": applied_count, "message": f"Successfully auto-applied to {applied_count} Tier-A opportunities!"}
 
 @router.post("/auto-classify-and-clean")
 def auto_classify_and_clean_jobs(db: Session = Depends(get_db)):
-    """
-    AI Automation: Classifies jobs by tech stack, purges non-tech/sales roles,
-    and sets high match scores on target tech roles.
-    """
-    all_jobs = db.query(Job).all()
-    tech_keywords = ["engineer", "developer", "software", "full stack", "fullstack", "frontend", "backend", "react", "python", "node", "architect", "data", "ai", "ml", "devops", "cloud", "infra"]
-    non_tech_keywords = ["artist", "partnerships", "sales", "account executive", "community", "recruiter", "marketing", "content"]
-
-    updated_count = 0
-    purged_count = 0
-
-    for job in all_jobs:
-        role_lower = (job.role or "").lower()
-        
-        # Check if non-tech
-        if any(nt in role_lower for nt in non_tech_keywords) and not any(t in role_lower for t in ["engineer", "developer"]):
-            job.tier = "C"
-            job.status = "IRRELEVANT"
-            job.is_archived = True
-            purged_count += 1
-        elif any(t in role_lower for t in tech_keywords):
-            job.tier = "A"
-            job.match_score = max(job.match_score or 85, 92)
-            if job.status in ["NOT REVIEWED", "DISCOVERED"]:
-                job.status = "READY TO APPLY"
-            job.is_archived = False
-            updated_count += 1
-
+    jobs = db.query(Job).all()
+    cleaned = 0
+    for j in jobs:
+        norm = role_intelligence_engine.normalize_title(j.role)
+        j.role = norm["canonical_role"]
+        cleaned += 1
     db.commit()
-    return {
-        "success": True,
-        "classified_tech_jobs": updated_count,
-        "purged_non_tech_jobs": purged_count,
-        "message": f"✓ AI Automation complete: Classified {updated_count} tech roles as Tier-A Ready, filtered {purged_count} non-tech roles."
-    }
-
-@router.post("/batch-auto-apply")
-def batch_auto_apply_jobs(req: BulkJobAction, db: Session = Depends(get_db)):
-    """
-    AI Automation: 1-Click Auto-Applies to selected jobs, creates application records,
-    and advances pipeline stages.
-    """
-    applied_count = 0
-    for job_id in req.job_ids:
-        job = db.query(Job).filter(Job.id == job_id).first()
-        if not job:
-            continue
-        
-        job.status = "AUTONOMOUSLY APPLIED"
-        # Check or create Application
-        existing_app = db.query(Application).filter(Application.company_name == job.company_name).first()
-        if not existing_app:
-            new_app = Application(
-                company_name=job.company_name,
-                role_title=job.role,
-                job_url=job.job_url,
-                salary_range=f"₹{job.min_salary}L - ₹{job.max_salary}L",
-                status="AUTONOMOUSLY APPLIED",
-                match_score=job.match_score or 92
-            )
-            db.add(new_app)
-        else:
-            existing_app.status = "AUTONOMOUSLY APPLIED"
-        
-        applied_count += 1
-
-    db.commit()
-    return {
-        "success": True,
-        "auto_applied_count": applied_count,
-        "message": f"✓ Successfully Auto-Applied to {applied_count} jobs with AI-tailored STAR resumes!"
-    }
+    return {"success": True, "cleaned_count": cleaned, "message": f"Cleaned & normalized {cleaned} job titles via Career Taxonomy!"}

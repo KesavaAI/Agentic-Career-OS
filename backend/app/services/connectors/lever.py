@@ -1,6 +1,6 @@
 import json
 import urllib.request
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from .base import BaseJobConnector
 from app.services.salary_engine import salary_engine
@@ -9,44 +9,69 @@ class LeverConnector(BaseJobConnector):
     name = "Lever ATS"
     source_type = "ATS_API"
 
-    POPULAR_BOARDS = ["razorpay", "postman", "atlassian", "plaid", "spotify"]
+    POPULAR_BOARDS = [
+        "razorpay", "postman", "atlassian", "plaid", "spotify", "cloudflare"
+    ]
 
-    def fetch_jobs(self, target_role: str, min_target_ctc: float = 7.0) -> List[Dict[str, Any]]:
+    def fetch_jobs(
+        self,
+        target_role: str,
+        min_target_ctc: float = 18.0,
+        page: int = 1,
+        limit: int = 20,
+        related_keywords: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
         results = []
         target_lower = target_role.lower()
+        search_terms = target_lower.split() + ([k.lower() for k in related_keywords] if related_keywords else [])
 
         def fetch_single_board(board: str):
             board_results = []
             try:
                 url = f"https://api.lever.co/v0/postings/{board}?mode=json"
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
                 with urllib.request.urlopen(req, timeout=1.5) as response:
                     if response.status == 200:
                         data = json.loads(response.read().decode("utf-8"))
                         company_display = board.capitalize()
-                        for item in data[:8]:
+                        
+                        start_idx = (page - 1) * 3
+                        for item in data[start_idx : start_idx + 5]:
                             title = item.get("text", "")
-                            if not self.is_valid_tech_role(title):
+                            if not self.is_valid_tech_role(title, search_terms):
                                 continue
+
+                            is_match = any(term in title.lower() for term in search_terms if len(term) > 2)
+                            if not is_match and not any(k in title.lower() for k in ["engineer", "developer", "architect", "lead", "analyst"]):
+                                continue
+
+                            source_id = str(item.get("id", ""))
                             cats = item.get("categories", {})
                             location = cats.get("location", "Bengaluru / Remote")
                             job_url = item.get("hostedUrl", f"https://jobs.lever.co/{board}")
+                            commitment = cats.get("commitment", "Full-time")
+                            workplace = cats.get("workplaceType", "Hybrid")
+
                             min_s, max_s, sal_str = salary_engine.calculate_realistic_lpa(company_display, title, min_target_ctc)
+
                             board_results.append({
+                                "source": f"Lever ATS ({company_display})",
+                                "source_job_id": f"lev_{board}_{source_id}",
                                 "company_name": company_display,
                                 "role": title,
                                 "location": location,
-                                "work_mode": cats.get("workplaceType", "Hybrid"),
+                                "work_mode": "Remote" if "remote" in workplace.lower() else "Hybrid",
+                                "employment_type": commitment,
                                 "min_salary": min_s,
                                 "max_salary": max_s,
                                 "salary_display": sal_str,
                                 "job_url": job_url,
-                                "source": f"Lever ATS ({company_display})",
-                                "description": item.get("descriptionPlain", f"Architect enterprise solutions as a {title} at {company_display}."),
-                                "required_skills": "Python, TypeScript, REST APIs, PostgreSQL, Distributed Systems",
-                                "preferred_skills": "Redis, Kafka, AWS, Docker",
+                                "canonical_url": job_url,
+                                "description": item.get("descriptionPlain", f"Design, build, and deploy mission-critical systems as a {title} at {company_display}."),
+                                "required_skills": "Python, TypeScript, Distributed Systems, PostgreSQL, REST APIs, System Design",
+                                "preferred_skills": "Redis, Kafka, Docker, Kubernetes, AWS",
                                 "match_score": 93,
-                                "job_hash": self.generate_job_hash(company_display, title, location)
+                                "job_hash": self.generate_job_hash(company_display, title, location, source_id)
                             })
             except Exception:
                 pass
@@ -57,4 +82,4 @@ class LeverConnector(BaseJobConnector):
             for f in as_completed(futures):
                 results.extend(f.result())
 
-        return results
+        return results[:limit]

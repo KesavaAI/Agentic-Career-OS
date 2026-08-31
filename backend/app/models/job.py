@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean, ForeignKey, Index
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -7,8 +7,8 @@ class Job(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
-    company_name = Column(String(255), nullable=False)
-    role = Column(String(255), nullable=False)
+    company_name = Column(String(255), nullable=False, index=True)
+    role = Column(String(255), nullable=False, index=True)
     tier = Column(String(10), default="A") # A, B, C
     priority_score = Column(Integer, default=85) # 0 - 100
     match_score = Column(Integer, default=85) # 0 - 100
@@ -17,7 +17,8 @@ class Job(Base):
     experience_min = Column(Float, default=1.0)
     experience_max = Column(Float, default=4.0)
     work_mode = Column(String(50), default="Remote / Hybrid") # Remote, Hybrid, Onsite
-    location = Column(String(255), default="Bengaluru")
+    location = Column(String(255), default="Bengaluru", index=True)
+    employment_type = Column(String(50), default="Full-time") # Full-time, Contract, Internship
     description = Column(Text, nullable=False)
     responsibilities = Column(Text, nullable=True)
     required_skills = Column(Text, nullable=True) # JSON or comma string
@@ -25,8 +26,15 @@ class Job(Base):
     education = Column(String(255), default="B.Tech / B.E / M.Tech / Equivalent")
     job_url = Column(String(500), nullable=True)
     career_url = Column(String(500), nullable=True)
-    source = Column(String(100), default="Direct / LinkedIn")
-    posted_date = Column(DateTime(timezone=True), nullable=True)
+    canonical_url = Column(String(500), nullable=True)
+    source = Column(String(100), default="Direct / LinkedIn", index=True)
+    source_job_id = Column(String(255), index=True, nullable=True)
+    description_hash = Column(String(64), index=True, nullable=True)
+    posted_date = Column(DateTime(timezone=True), nullable=True, index=True)
+    first_seen_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_seen_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_verified_at = Column(DateTime(timezone=True), server_default=func.now())
+    expired_at = Column(DateTime(timezone=True), nullable=True)
     deadline = Column(DateTime(timezone=True), nullable=True)
     status = Column(String(50), default="NOT REVIEWED") # NOT REVIEWED, SHORTLISTED, READY TO APPLY, APPLIED, INTERVIEW, OFFER, etc.
     interview_stage = Column(String(50), nullable=True)
@@ -39,7 +47,13 @@ class Job(Base):
     freshness_badge = Column(String(50), default="🔥 Posted today") # 🔥 Posted today, 🟢 1-3 days, 🟡 4-7 days, 🟠 8-14 days, 🔴 15+ days
     is_urgent = Column(Boolean, default=False)
     is_easy_apply = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True, index=True)
     is_demo = Column(Boolean, default=False)
     is_archived = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_jobs_source_job_id", "source", "source_job_id"),
+        Index("ix_jobs_company_role", "company_name", "role"),
+    )

@@ -237,6 +237,21 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
         <div className="flex items-center justify-center h-64">
           <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
+      ) : jobs.length === 0 ? (
+        <div className="p-12 rounded-xl bg-slate-900 border border-slate-800 text-center flex flex-col items-center justify-center space-y-3">
+          <Compass className="w-10 h-10 text-slate-500" />
+          <h3 className="text-base font-bold text-slate-200">No matching jobs found.</h3>
+          <p className="text-xs text-slate-400 max-w-md">
+            Try adjusting your search criteria or click "Crawl & Sync Today's Fresh Jobs" to discover live opportunities.
+          </p>
+          <button
+            onClick={handleSyncLiveJobs}
+            disabled={syncing}
+            className="mt-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+          >
+            ⚡ Crawl & Sync Live Jobs
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {jobs.map((job) => (

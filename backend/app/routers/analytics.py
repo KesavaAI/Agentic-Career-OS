@@ -154,25 +154,39 @@ def get_today_priorities(db: Session = Depends(get_db), current_user: User = Dep
     }
 
 @router.get("/readiness")
-def get_readiness_score(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_readiness_score(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
+    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first() if current_user else db.query(Profile).first()
+    target_role = profile.target_role if (profile and profile.target_role) else "Full Stack / Web Development"
+    candidate_name = (current_user.full_name if current_user else (profile.full_name if profile else "Alexander"))
+    target_ctc = float(profile.target_min_ctc_lpa) if (profile and profile.target_min_ctc_lpa) else 24.0
+
     learning_greens = db.query(LearningTopic).filter(LearningTopic.status == "GREEN").count()
     total_learning = max(db.query(LearningTopic).count(), 1)
-    tech_skill_avg = min(82 + (learning_greens / total_learning) * 16, 98)
+    tech_skill_avg = min(84 + (learning_greens / total_learning) * 14, 98)
     
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first() if current_user else db.query(Profile).first()
-    project_depth = 92.0 if (profile and (profile.experiences or profile.internships)) else 85.0
+    projects_count = db.query(Project).count()
+    project_depth = min(86.0 + (projects_count * 3.0), 96.0) if projects_count > 0 else 90.0
+
+    # ATS score from default or highest resume
+    top_resume = db.query(Resume).order_by(Resume.ats_score.desc()).first()
+    ats_resume_strength = float(top_resume.ats_score) if top_resume and top_resume.ats_score else 94.0
+
+    # Mock Interview score
     mock_interview_avg = 88.0
-    ats_resume_strength = 94.0
-    
+
+    # Funnel momentum from active applications
     apps_count = db.query(Application).count()
-    funnel_momentum = min(70.0 + (apps_count * 2.5), 98.0)
+    funnel_momentum = min(72.0 + (apps_count * 2.5), 98.0)
     
     return readiness_engine.calculate(
         tech_skill_avg=tech_skill_avg,
-        tcs_project_depth=project_depth,
+        project_depth=project_depth,
         mock_interview_avg=mock_interview_avg,
         ats_resume_strength=ats_resume_strength,
-        funnel_momentum=funnel_momentum
+        funnel_momentum=funnel_momentum,
+        target_role=target_role,
+        candidate_name=candidate_name,
+        target_min_ctc_lpa=target_ctc
     )
 
 @router.get("/funnel")
@@ -231,24 +245,43 @@ def get_analytics_dashboard(db: Session = Depends(get_db), current_user: User = 
 
 @router.get("/weekly-review")
 def get_weekly_review(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
-    apps_count = db.query(Application).count()
-    interviews_count = db.query(Interview).count()
+    apps = db.query(Application).all()
+    apps_count = len(apps)
+    interviews = db.query(Interview).all()
+    interviews_count = len(interviews)
     offers_count = db.query(Offer).count()
-    tier_a_count = db.query(Job).filter(Job.tier == "A").count()
-    responses_count = db.query(Application).filter(
-        Application.status.in_(["RECRUITER CONTACTED", "SHORTLISTED", "OA / ASSESSMENT", "TECHNICAL ROUND", "INTERVIEW SCHEDULED"])
-    ).count()
+    tier_a_count = db.query(Job).filter(Job.tier == "A", Job.is_archived == False).count()
+    responses_count = sum(1 for a in apps if a.status in [
+        "RECRUITER CONTACTED", "SHORTLISTED", "OA / ASSESSMENT", "TECHNICAL ROUND", "INTERVIEW SCHEDULED", "SYSTEM DESIGN"
+    ])
+    
+    overdue_fu = db.query(FollowUp).filter(FollowUp.is_completed == False).all()
+    
+    # Generate dynamic, personalized strategic priorities
+    dynamic_priorities = []
+    if interviews_count > 0:
+        next_int = interviews[0]
+        dynamic_priorities.append(f"Prepare for scheduled {next_int.company_name} {next_int.stage or 'Technical Architecture Round'} ({next_int.time_str or 'Upcoming'}).")
+    else:
+        dynamic_priorities.append("Complete 15-minute daily verbal defense practice on High-Throughput Web Architecture & Hydration.")
+        
+    if len(overdue_fu) > 0:
+        comp_names = ", ".join([f.company_name for f in overdue_fu[:2]])
+        dynamic_priorities.append(f"Dispatch 1-click tailored follow-up outreach to {len(overdue_fu)} companies ({comp_names}).")
+    else:
+        dynamic_priorities.append("Maintain 24/7 Auto-Pilot Heartbeat daemon with automated 30-min discovery cycles.")
+        
+    dynamic_priorities.append(f"Target remaining Tier-A opportunities to maintain high interview conversion momentum.")
+
+    now = datetime.utcnow()
+    week_num = now.isocalendar()[1]
 
     return {
-        "week_label": "Week 35 (Live Pulse)",
+        "week_label": f"Week {week_num} (Live Pulse)",
         "applications_count": apps_count,
         "tier_a_applications_count": tier_a_count,
         "responses_count": responses_count,
         "interviews_count": interviews_count,
         "offers_count": offers_count,
-        "next_week_priorities": [
-            "Maintain 24/7 Auto-Pilot Heartbeat daemon with daily cap of 15 applications.",
-            "Complete 15-minute daily verbal defense practice on React Server Components and Distributed Locks.",
-            "Follow up on pending applications active for > 4 days with 1-click tailored recruiter outreach."
-        ]
+        "next_week_priorities": dynamic_priorities
     }

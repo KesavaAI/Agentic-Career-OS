@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start FastAPI Backend",
+      "type": "shell",
+      "command": "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Start Vite Frontend",
+      "type": "shell",
+      "command": "npm run dev -- --port 3000",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Run Live System Audit (20-Endpoints)",
+      "type": "shell",
+      "command": "python -m pytest || python scratch/audit_live_server.py",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "group": "test"
+    },
+    {
+      "label": "TypeCheck Frontend (TypeScript)",
+      "type": "shell",
+      "command": "npx tsc --noEmit",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "group": "test"
+    }
+  ]
+}

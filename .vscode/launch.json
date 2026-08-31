@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "\u26a1 FastAPI: Run Backend",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+        "--reload"
+      ],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend"
+      },
+      "jinja": true,
+      "justMyCode": false
+    },
+    {
+      "name": "\ud83d\udcbb Vite: Launch Frontend (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/frontend"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "\ud83d\ude80 Launch Full Stack (Backend + Frontend)",
+      "configurations": [
+        "\u26a1 FastAPI: Run Backend",
+        "\ud83d\udcbb Vite: Launch Frontend (Chrome)"
+      ]
+    }
+  ]
+}

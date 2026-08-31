@@ -343,11 +343,15 @@ export const api = {
   getNotifications: () => fetchApi<any[]>('/notifications'),
   markNotificationRead: (id: number) => fetchApi<any>(`/notifications/${id}/read`, { method: 'POST' }),
 
-  // Career Agent
+  // Career Agent & Autonomous Swarm
   runCareerAgent: (data: { raw_jd_text: string; job_url?: string; source?: string }) =>
     fetchApi<any>('/career-agent/run', { method: 'POST', body: JSON.stringify(data) }),
   approveCareerAgent: (data: { state: any; approve: boolean; action: string }) =>
     fetchApi<any>('/career-agent/approve', { method: 'POST', body: JSON.stringify(data) }),
+  submitAgentDirective: (directive: string) =>
+    fetchApi<any>('/career-agent/directive', { method: 'POST', body: JSON.stringify({ directive }) }),
+  getSwarmDagState: () => fetchApi<any>('/career-agent/swarm-dag'),
+  executeSwarmCycle: () => fetchApi<any>('/career-agent/swarm-execute', { method: 'POST' }),
 
   // Audit & Settings
   getAuditLogs: () => fetchApi<any[]>('/audit'),

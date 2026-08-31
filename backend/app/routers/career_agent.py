@@ -230,3 +230,29 @@ def submit_agent_approval(req: AgentApprovalRequest, db: Session = Depends(get_d
     )
     created = create_job(job_create, db)
     return {"status": "approved", "job_id": created.id, "message": f"Successfully created job {created.role} at {created.company_name}"}
+
+class DirectiveRequest(BaseModel):
+    directive: str
+
+@router.post("/directive")
+def submit_agent_directive(
+    req: DirectiveRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """Submits a natural language executive directive to the multi-agent swarm."""
+    from app.services.agent_swarm_orchestrator import agent_swarm_orchestrator
+    user_id = current_user.id if current_user else None
+    return agent_swarm_orchestrator.process_natural_language_directive(req.directive, db, user_id)
+
+@router.get("/swarm-dag")
+def get_swarm_dag_state(db: Session = Depends(get_db)):
+    """Returns the live DAG execution and node state for all 5 swarm agents."""
+    from app.services.agent_swarm_orchestrator import agent_swarm_orchestrator
+    return agent_swarm_orchestrator.get_swarm_dag_state(db)
+
+@router.post("/swarm-execute")
+def execute_swarm_cycle(db: Session = Depends(get_db)):
+    """Triggers an immediate parallel multi-agent swarm sweep."""
+    from app.services.agent_swarm_orchestrator import agent_swarm_orchestrator
+    return agent_swarm_orchestrator.execute_full_swarm_cycle(db)

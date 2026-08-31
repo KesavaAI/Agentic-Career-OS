@@ -163,10 +163,12 @@ export interface LearningTopic {
 
 export interface FollowUp {
   id: number;
+  application_id?: number;
   company_name: string;
   role_title: string;
   applied_date?: string;
   follow_up_date: string;
+  response_status?: string;
   action_notes: string;
   is_completed: boolean;
 }

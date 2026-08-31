@@ -337,6 +337,9 @@ export const api = {
   // Follow-ups & Notifications
   getFollowups: (filter?: string) => fetchApi<any[]>(`/followups${filter ? `?filter_view=${filter}` : ''}`),
   completeFollowup: (id: number) => fetchApi<any>(`/followups/${id}/complete`, { method: 'POST' }),
+  generateFollowupOutreach: (id: number) => fetchApi<any>(`/followups/${id}/generate-outreach`),
+  sendFollowupOutreach: (id: number) => fetchApi<any>(`/followups/${id}/send-outreach`, { method: 'POST' }),
+  createFollowup: (data: any) => fetchApi<any>('/followups', { method: 'POST', body: JSON.stringify(data) }),
   getNotifications: () => fetchApi<any[]>('/notifications'),
   markNotificationRead: (id: number) => fetchApi<any>(`/notifications/${id}/read`, { method: 'POST' }),
 

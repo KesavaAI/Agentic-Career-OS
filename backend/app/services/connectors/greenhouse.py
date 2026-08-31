@@ -1,8 +1,7 @@
-import json
-import urllib.request
 from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from .base import BaseJobConnector
+from .rate_limiter import ats_rate_limiter
 from app.services.salary_engine import salary_engine
 
 class GreenhouseConnector(BaseJobConnector):
@@ -10,7 +9,7 @@ class GreenhouseConnector(BaseJobConnector):
     source_type = "ATS_API"
 
     POPULAR_BOARDS = [
-        "zepto", "swiggy", "stripe", "airbnb", "figma", "uber", "coinbase", "gitlab"
+        "zepto", "swiggy", "stripe", "airbnb", "figma", "gusto", "instacart"
     ]
 
     def fetch_jobs(
@@ -29,49 +28,47 @@ class GreenhouseConnector(BaseJobConnector):
             board_results = []
             try:
                 url = f"https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true"
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-                with urllib.request.urlopen(req, timeout=1.5) as response:
-                    if response.status == 200:
-                        data = json.loads(response.read().decode("utf-8"))
-                        company_display = board.capitalize()
-                        jobs_list = data.get("jobs", [])
+                data = ats_rate_limiter.fetch_with_rate_limit(url, timeout=1.5, ttl_seconds=600)
+                if data and isinstance(data, dict):
+                    company_display = board.capitalize()
+                    jobs_list = data.get("jobs", [])
+                    
+                    start_idx = (page - 1) * 3
+                    for item in jobs_list[start_idx : start_idx + 5]:
+                        title = item.get("title", "")
+                        if not self.is_valid_tech_role(title, search_terms):
+                            continue
+
+                        is_match = any(term in title.lower() for term in search_terms if len(term) > 2)
+                        if not is_match and not any(k in title.lower() for k in ["engineer", "developer", "architect", "lead", "analyst"]):
+                            continue
+
+                        source_id = str(item.get("id", ""))
+                        location = item.get("location", {}).get("name", "Bengaluru / Remote")
+                        job_url = item.get("absolute_url", f"https://boards.greenhouse.io/{board}")
                         
-                        start_idx = (page - 1) * 3
-                        for item in jobs_list[start_idx : start_idx + 5]:
-                            title = item.get("title", "")
-                            if not self.is_valid_tech_role(title, search_terms):
-                                continue
+                        work_mode = "Remote" if "remote" in location.lower() or "anywhere" in location.lower() else "Hybrid"
+                        min_s, max_s, sal_str = salary_engine.calculate_realistic_lpa(company_display, title, min_target_ctc)
 
-                            is_match = any(term in title.lower() for term in search_terms if len(term) > 2)
-                            if not is_match and not any(k in title.lower() for k in ["engineer", "developer", "architect", "lead", "analyst"]):
-                                continue
-
-                            source_id = str(item.get("id", ""))
-                            location = item.get("location", {}).get("name", "Bengaluru / Remote")
-                            job_url = item.get("absolute_url", f"https://boards.greenhouse.io/{board}")
-                            
-                            work_mode = "Remote" if "remote" in location.lower() or "anywhere" in location.lower() else "Hybrid"
-                            min_s, max_s, sal_str = salary_engine.calculate_realistic_lpa(company_display, title, min_target_ctc)
-
-                            board_results.append({
-                                "source": f"Greenhouse ATS ({company_display})",
-                                "source_job_id": f"gh_{board}_{source_id}",
-                                "company_name": company_display,
-                                "role": title,
-                                "location": location,
-                                "work_mode": work_mode,
-                                "employment_type": "Full-time",
-                                "min_salary": min_s,
-                                "max_salary": max_s,
-                                "salary_display": sal_str,
-                                "job_url": job_url,
-                                "canonical_url": job_url,
-                                "description": f"Lead engineering architecture and production systems as a {title} at {company_display}.",
-                                "required_skills": "Python, TypeScript, React, SQL, Cloud Architecture, System Design",
-                                "preferred_skills": "Docker, Kubernetes, Redis, Microservices, CI/CD",
-                                "match_score": 94,
-                                "job_hash": self.generate_job_hash(company_display, title, location, source_id)
-                            })
+                        board_results.append({
+                            "source": f"Greenhouse ATS ({company_display})",
+                            "source_job_id": f"gh_{board}_{source_id}",
+                            "company_name": company_display,
+                            "role": title,
+                            "location": location,
+                            "work_mode": work_mode,
+                            "employment_type": "Full-time",
+                            "min_salary": min_s,
+                            "max_salary": max_s,
+                            "salary_display": sal_str,
+                            "job_url": job_url,
+                            "canonical_url": job_url,
+                            "description": f"Lead engineering architecture and production systems as a {title} at {company_display}.",
+                            "required_skills": "Python, TypeScript, React, SQL, Cloud Architecture, System Design",
+                            "preferred_skills": "Docker, Kubernetes, Redis, Microservices, CI/CD",
+                            "match_score": 94,
+                            "job_hash": self.generate_job_hash(company_display, title, location, source_id)
+                        })
             except Exception:
                 pass
             return board_results

@@ -269,6 +269,8 @@ export const api = {
   analyzeJob: (id: number) => fetchApi<any>(`/jobs/${id}/analyze`, { method: 'POST' }),
   ingestJob: (data: { raw_text: string; url?: string; source?: string }) =>
     fetchApi<any>('/jobs/ingest', { method: 'POST', body: JSON.stringify(data) }),
+  autoClassifyAndCleanJobs: () => fetchApi<any>('/jobs/auto-classify-and-clean', { method: 'POST' }),
+  batchAutoApplyJobs: (jobIds: number[]) => fetchApi<any>('/jobs/batch-auto-apply', { method: 'POST', body: JSON.stringify({ job_ids: jobIds }) }),
 
   // Applications
   getApplications: () => fetchApi<any[]>('/applications'),

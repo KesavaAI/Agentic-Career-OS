@@ -228,3 +228,27 @@ def get_analytics_dashboard(db: Session = Depends(get_db), current_user: User = 
         "readiness": readiness,
         "status": "ONLINE"
     }
+
+@router.get("/weekly-review")
+def get_weekly_review(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
+    apps_count = db.query(Application).count()
+    interviews_count = db.query(Interview).count()
+    offers_count = db.query(Offer).count()
+    tier_a_count = db.query(Job).filter(Job.tier == "A").count()
+    responses_count = db.query(Application).filter(
+        Application.status.in_(["RECRUITER CONTACTED", "SHORTLISTED", "OA / ASSESSMENT", "TECHNICAL ROUND", "INTERVIEW SCHEDULED"])
+    ).count()
+
+    return {
+        "week_label": "Week 35 (Live Pulse)",
+        "applications_count": apps_count,
+        "tier_a_applications_count": tier_a_count,
+        "responses_count": responses_count,
+        "interviews_count": interviews_count,
+        "offers_count": offers_count,
+        "next_week_priorities": [
+            "Maintain 24/7 Auto-Pilot Heartbeat daemon with daily cap of 15 applications.",
+            "Complete 15-minute daily verbal defense practice on React Server Components and Distributed Locks.",
+            "Follow up on pending applications active for > 4 days with 1-click tailored recruiter outreach."
+        ]
+    }

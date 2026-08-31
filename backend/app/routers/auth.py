@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
 from app.database import get_db
@@ -138,7 +138,7 @@ def validate_password_complexity(password: str) -> None:
         raise HTTPException(status_code=400, detail="Password must contain at least one special character (!@#$%^&*...).")
 
 class UserRegisterReq(BaseModel):
-    email: EmailStr
+    email: str
     password: str
     full_name: str
     phone: Optional[str] = None

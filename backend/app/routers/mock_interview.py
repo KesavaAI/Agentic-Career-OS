@@ -63,10 +63,8 @@ def mercor_start_session(
         
         user_skills = current_user.skills if hasattr(current_user, "skills") and current_user.skills else []
         skills_str = ", ".join(user_skills) if isinstance(user_skills, list) else str(user_skills)
-        resume_content = f"Role: {current_user.target_role or req.role}
-Skills: {skills_str}
-" + "
-".join(exp_lines)
+        joined_exp = "\n".join(exp_lines)
+        resume_content = f"Role: {current_user.target_role or req.role}\nSkills: {skills_str}\n{joined_exp}"
 
     initial = mercor_conversational_engine.generate_initial_question(
         role=req.role or (current_user.target_role if current_user else "Full Stack / Web Development"),

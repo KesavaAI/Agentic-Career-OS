@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.database import get_db
 from app.models.interview import InterviewSession
+from app.models.learning import LearningTopic
 from app.models.user import User
 from app.dependencies import get_current_user
 from app.schemas.interview import MockInterviewTurnRequest, MockInterviewTurnResponse, InterviewSessionOut
@@ -30,6 +31,7 @@ class MercorTurnRequest(BaseModel):
     company: Optional[str] = "Acme"
     history: List[Dict[str, Any]] = []
     latest_answer: str
+    whiteboard_code: Optional[str] = ""
     turn_number: int = 2
 
 class MercorEvaluateRequest(BaseModel):
@@ -39,7 +41,7 @@ class MercorEvaluateRequest(BaseModel):
     total_duration_seconds: Optional[float] = 300.0
 
 # =========================================================================
-# 🔬 MERCOR-STYLE AUTONOMOUS AI INTERVIEW ENDPOINTS
+# 🔬 MERCOR-STYLE AUTONOMOUS AI PANEL & FLYWHEEL ENDPOINTS
 # =========================================================================
 
 @router.post("/mercor-start")
@@ -47,9 +49,6 @@ def mercor_start_session(
     req: MercorStartRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Initializes a dynamic Mercor-style interview with resume-grounded opening question.
-    """
     user_profile = {
         "target_role": current_user.target_role if current_user else req.role,
         "skills": ["Python", "FastAPI", "React", "SQL", "PostgreSQL", "Docker", "Redis"],
@@ -68,15 +67,12 @@ def mercor_process_turn(
     req: MercorTurnRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Processes candidate spoken answer, detects 'I' vs 'We', evaluates depth level,
-    and dynamically generates a 3-layer deep contextual follow-up.
-    """
     next_turn = mercor_conversational_engine.generate_next_turn(
         target_role=req.role or "Full Stack Engineer",
         target_company=req.company or "Acme",
         history=req.history,
         latest_answer=req.latest_answer,
+        whiteboard_code=req.whiteboard_code or "",
         turn_number=req.turn_number
     )
     return next_turn
@@ -87,10 +83,6 @@ def mercor_evaluate_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Final evaluation based on the 4 Mercor Pillars:
-    Ownership (I vs We), Technical Depth (3 Layers), Compression (<90s), Quantified Metrics.
-    """
     evaluation = mercor_conversational_engine.evaluate_mercor_session(
         role=req.role or "Full Stack Engineer",
         company=req.company or "Acme",
@@ -98,16 +90,17 @@ def mercor_evaluate_session(
         total_duration_seconds=req.total_duration_seconds or 300.0
     )
 
+    # 1. Persist interview session
     try:
         session_rec = InterviewSession(
             user_id=current_user.id if current_user else None,
-            mode="mercor_adaptive",
+            mode="panel_tag_team",
             is_pressure_mode=True,
             score_out_of_10=round(evaluation["overall_score"] / 10.0, 1),
             strengths=json.dumps(evaluation["strengths"]),
             weaknesses=json.dumps(evaluation["warnings"]),
-            missing_points=json.dumps(evaluation["mercor_pillars"]),
-            recommended_topics=json.dumps(["Individual Ownership (I vs We)", "High Scale Concurrency"]),
+            missing_points=json.dumps(evaluation.get("panel_scores", {})),
+            recommended_topics=json.dumps(evaluation.get("mercor_pillars", {})),
             transcript_json=json.dumps(req.turns)
         )
         db.add(session_rec)
@@ -115,10 +108,52 @@ def mercor_evaluate_session(
     except Exception as e:
         print(f"Error persisting session: {e}")
 
+    # 2. Closed-Loop Career Flywheel: Auto-seed weak topic into LearningTopics
+    try:
+        if current_user and evaluation.get("flywheel_remediation"):
+            remedy = evaluation["flywheel_remediation"]
+            topic_name = remedy.get("recommended_topic", "Technical Architecture Defense")
+            existing = db.query(LearningTopic).filter(
+                LearningTopic.user_id == current_user.id,
+                LearningTopic.skill == topic_name
+            ).first()
+
+            if not existing:
+                notes = {
+                    "source": f"Autonomous Interview Panel ({req.company})",
+                    "mental_models": [
+                        f"Master trade-offs identified by Staff Architect David Vance during {req.company} session.",
+                        "Structure 60-second answers with exact % latency and $ ARR numbers.",
+                        "Isolate individual code ownership vs shared team responsibilities."
+                    ],
+                    "interviewer_trap": "Panelists trap you by probing mathematical physics (e.g. RTT latency across regions).",
+                    "code_anchor": "// Production implementation pattern verified in mock interview",
+                    "metric_defense": "Quantified P99 latency reduction & zero timeout drops."
+                }
+                new_topic = LearningTopic(
+                    user_id=current_user.id,
+                    skill=topic_name,
+                    category=remedy.get("category", "Architecture Gaps"),
+                    market_demand="High Priority",
+                    market_demand_pct=95,
+                    my_level="Intermediate",
+                    gap_level="Advanced Production",
+                    priority="Critical",
+                    stage="LEARN",
+                    status="YELLOW",
+                    recall_schedule_day=1,
+                    notes=json.dumps(notes),
+                    is_demo=False
+                )
+                db.add(new_topic)
+                db.commit()
+    except Exception as e:
+        print(f"Error auto-seeding flywheel learning topic: {e}")
+
     return evaluation
 
 # =========================================================================
-# 🎥 CLASSIC VIDEO INTERVIEW ENDPOINTS
+# 🎥 CLASSIC VIDEO & TEXT INTERVIEW ENDPOINTS
 # =========================================================================
 
 @router.get("/readiness-diagnostic")

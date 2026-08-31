@@ -3,7 +3,8 @@ import {
   Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Sparkles, 
   Clock, AlertTriangle, CheckCircle2, ChevronRight, RotateCcw, 
   Video, Play, Square, Pause, UserCheck, MessageSquare, StopCircle,
-  Headphones, RefreshCw, User, Radio, Award, Target, Zap 
+  Headphones, RefreshCw, User, Radio, Award, Target, Zap, Code,
+  PenTool, ShieldCheck, Terminal, Layers 
 } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -11,8 +12,6 @@ interface VideoInterviewArenaProps {
   role: string;
   company: string;
   initialMode?: 'video' | 'voice' | 'text';
-  initialInterviewerGender?: 'female' | 'male';
-  isMercorMode?: boolean;
   onFinishSession: (sessionData: any) => void;
   onCancel: () => void;
 }
@@ -21,22 +20,25 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
   role,
   company,
   initialMode = 'video',
-  initialInterviewerGender = 'female',
-  isMercorMode = true,
   onFinishSession,
   onCancel
 }) => {
   const [interviewMode, setInterviewMode] = useState<'video' | 'voice' | 'text'>(initialMode);
-  const [interviewerGender, setInterviewerGender] = useState<'female' | 'male'>(initialInterviewerGender);
   const [isSpeakingAI, setIsSpeakingAI] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
 
+  // Active Tag-Team Speaker ('sarah' | 'david')
+  const [activeSpeaker, setActiveSpeaker] = useState<'sarah' | 'david'>('sarah');
+  const [activeSpeakerName, setActiveSpeakerName] = useState('Sarah Jenkins');
+  const [activeSpeakerTitle, setActiveSpeakerTitle] = useState('VP of Talent & Product');
+
   // Turn state
   const [turnNumber, setTurnNumber] = useState(1);
-  const [currentQuestion, setCurrentQuestion] = useState("Tell me about a challenging technical project you owned end-to-end. Walk me through the architecture and the hardest technical decision you made.");
-  const [currentPhase, setCurrentPhase] = useState("Project Deep Dive");
-  const [currentDepthLevel, setCurrentDepthLevel] = useState("Layer 1: Architecture Overview");
-  const [coachNote, setCoachNote] = useState<string | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState("Welcome! Walk me through the core architecture, the business problem it solved, and your specific individual contribution.");
+  const [currentPhase, setCurrentPhase] = useState("Project Overview & Business Stakes");
+  const [currentDepthLevel, setCurrentDepthLevel] = useState("Layer 1: Problem Space & Architecture");
+  const [requiresWhiteboard, setRequiresWhiteboard] = useState(false);
+  const [activeRightTab, setActiveRightTab] = useState<'camera' | 'whiteboard'>('camera');
 
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -44,6 +46,9 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
   const [micActive, setMicActive] = useState(true);
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [currentAnswer, setCurrentAnswer] = useState('');
+  const [whiteboardCode, setWhiteboardCode] = useState(`// Architecture Diagram / Code Sandbox
+// Write SQL queries, lock mechanisms, or pseudo-architecture schemas here
+`);
   const [turnsHistory, setTurnsHistory] = useState<any[]>([]);
   const [liveTelemetry, setLiveTelemetry] = useState<any>({
     ownership_score: 85,
@@ -51,7 +56,8 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
     depth_level: 2,
     depth_label: "Layer 2: Technical Trade-Offs",
     quantified_metrics_count: 1,
-    compression_rating: "Optimal (<90s)"
+    compression_rating: "Optimal (<90s)",
+    physics_anomaly_detected: false
   });
   const [isLoadingTurn, setIsLoadingTurn] = useState(false);
 
@@ -59,38 +65,45 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Load opening Mercor question
+  // Load opening panel question
   useEffect(() => {
-    async function initMercor() {
+    async function initPanel() {
       try {
         setIsLoadingTurn(true);
         const data = await api.mercorStart({ role, company });
         if (data && data.question) {
           setCurrentQuestion(data.question);
-          setCurrentPhase(data.phase || "Project Deep Dive");
+          setActiveSpeaker(data.interviewer || 'sarah');
+          setActiveSpeakerName(data.interviewer_name || 'Sarah Jenkins');
+          setActiveSpeakerTitle(data.interviewer_title || 'VP of Talent & Product');
+          setCurrentPhase(data.phase || "Project Overview & Business Stakes");
           setCurrentDepthLevel(data.depth_level || "Layer 1");
+          if (data.requires_whiteboard) {
+            setRequiresWhiteboard(true);
+            setActiveRightTab('whiteboard');
+          }
         }
       } catch (err) {
-        console.warn("Mercor start fallback:", err);
+        console.warn("Panel start fallback:", err);
       } finally {
         setIsLoadingTurn(false);
       }
     }
-    initMercor();
+    initPanel();
   }, [role, company]);
 
-  // Voice synthesis
-  const speakQuestion = (text: string) => {
+  // Voice synthesis switching dynamically based on active tag-team speaker
+  const speakQuestion = (text: string, speaker: 'sarah' | 'david') => {
     if (isAudioMuted || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
-    utterance.pitch = interviewerGender === 'female' ? 1.05 : 0.85;
+    utterance.pitch = speaker === 'sarah' ? 1.05 : 0.85;
 
     const voices = window.speechSynthesis.getVoices();
     if (voices && voices.length > 0) {
-      if (interviewerGender === 'female') {
+      if (speaker === 'sarah') {
         const femaleVoice = voices.find(v => (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Google UK English Female') || v.name.includes('Samantha') || v.name.includes('Victoria')) && v.lang.startsWith('en'));
         if (femaleVoice) utterance.voice = femaleVoice;
       } else {
@@ -107,13 +120,13 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
   };
 
   useEffect(() => {
-    speakQuestion(currentQuestion);
+    speakQuestion(currentQuestion, activeSpeaker);
     return () => {
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
     };
-  }, [currentQuestion, interviewerGender, isAudioMuted]);
+  }, [currentQuestion, activeSpeaker, isAudioMuted]);
 
   // Media Setup
   useEffect(() => {
@@ -171,7 +184,7 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
     };
   }, [interviewMode]);
 
-  // Pacing Timer
+  // Duration Timer
   useEffect(() => {
     let interval: any = null;
     if (isRecording && !isPaused) {
@@ -197,14 +210,17 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
     }
   };
 
-  // 🚀 SUBMIT TURN & GET MERCOR DYNAMIC FOLLOW-UP PROBE
+  // 🚀 SUBMIT TURN TO EXECUTIVE PANEL
   const handleNextTurn = async () => {
     const recordedTurn = {
       turn_number: turnNumber,
+      interviewer: activeSpeaker,
+      interviewer_name: activeSpeakerName,
       question: currentQuestion,
       phase: currentPhase,
       depth_level: currentDepthLevel,
-      answer: currentAnswer.trim() || "(Candidate answered via audio)",
+      answer: currentAnswer.trim() || "(Candidate answered via voice)",
+      whiteboard_code: whiteboardCode.trim(),
       duration_seconds: durationSeconds || 35
     };
 
@@ -221,41 +237,52 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
         company,
         history: newHistory,
         latest_answer: recordedTurn.answer,
+        whiteboard_code: recordedTurn.whiteboard_code,
         turn_number: turnNumber + 1
       });
 
       if (nextTurnData) {
         setTurnNumber(turnNumber + 1);
         setCurrentQuestion(nextTurnData.question);
+        setActiveSpeaker(nextTurnData.interviewer || 'david');
+        setActiveSpeakerName(nextTurnData.interviewer_name || 'David Vance');
+        setActiveSpeakerTitle(nextTurnData.interviewer_title || 'Staff Principal Architect');
         setCurrentPhase(nextTurnData.phase);
         setCurrentDepthLevel(nextTurnData.depth_level);
+        if (nextTurnData.requires_whiteboard) {
+          setRequiresWhiteboard(true);
+          setActiveRightTab('whiteboard');
+        }
         if (nextTurnData.telemetry) {
           setLiveTelemetry(nextTurnData.telemetry);
         }
-        if (nextTurnData.coach_note) {
-          setCoachNote(nextTurnData.coach_note);
-        }
       }
     } catch (err) {
-      console.warn("Error getting next Mercor turn:", err);
-      // Clean fallback progression
+      console.warn("Error processing panel turn:", err);
+      // Clean fallback tag-team progression
       setTurnNumber(turnNumber + 1);
-      setCurrentQuestion("How did you test and validate this architecture under sudden traffic surges before releasing to production?");
-      setCurrentPhase("Production Resilience & Testing");
+      setActiveSpeaker('david');
+      setActiveSpeakerName('David Vance');
+      setActiveSpeakerTitle('Staff Principal Architect');
+      setCurrentQuestion("David jumping in. How does your caching and connection pooling behave during sudden 10x traffic spikes?");
+      setCurrentPhase("10x Production Stress Test");
       setCurrentDepthLevel("Layer 3: Failure Isolation");
     } finally {
       setIsLoadingTurn(false);
     }
   };
 
-  // 🛑 END INTERVIEW & EVALUATE MERCOR SCORECARD
+  // 🛑 END INTERVIEW & EVALUATE EXECUTIVE PANEL REPORT
   const handleEndAndEvaluate = async () => {
-    const latestTurn = currentAnswer.trim() ? [{
+    const latestTurn = currentAnswer.trim() || whiteboardCode.trim() ? [{
       turn_number: turnNumber,
+      interviewer: activeSpeaker,
+      interviewer_name: activeSpeakerName,
       question: currentQuestion,
       phase: currentPhase,
       depth_level: currentDepthLevel,
       answer: currentAnswer.trim(),
+      whiteboard_code: whiteboardCode.trim(),
       duration_seconds: durationSeconds || 30
     }] : [];
 
@@ -273,21 +300,25 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
       });
       onFinishSession(evaluation);
     } catch (err) {
-      console.warn("Mercor evaluate fallback:", err);
+      console.warn("Panel evaluate fallback:", err);
       onFinishSession({
         target_role: role,
         company: company,
-        overall_score: 78,
-        rating_tier: "Competitive Candidate (Top 15% Pool)",
+        overall_score: 80,
+        rating_tier: "Top 10% Executive Talent Pool",
         mercor_pillars: {
-          ownership_score: 82,
-          technical_depth_score: 80,
-          compression_score: 85,
-          quantified_impact_score: 75
+          ownership_score: 84,
+          technical_depth_score: 82,
+          compression_score: 88,
+          quantified_impact_score: 76
+        },
+        panel_scores: {
+          sarah_behavioral_score: 82,
+          david_architecture_score: 79
         },
         strengths: [
           "✓ Strong individual ownership and architectural reasoning",
-          "✓ Handled deep technical probing effectively"
+          "✓ Handled Staff Architect David's concurrency challenges"
         ],
         warnings: [
           "⚠ Quantify metrics more aggressively with before-and-after numbers",
@@ -306,34 +337,34 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
             <h2 className="text-sm font-black text-slate-100 uppercase tracking-wider">
-              Mercor AI Autonomous Interview: {company} — {role}
+              Executive AI Panel Boardroom: {company} — {role}
             </h2>
-            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase">
-              Adaptive Probing Engine
+            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
+              Tag-Team Panel Mode
             </span>
           </div>
-          <p className="text-xs text-slate-400">Dynamic 3-layer deep cross-examination & real-time telemetry</p>
+          <p className="text-xs text-slate-400">Sarah Jenkins (VP Talent) & David Vance (Staff Architect)</p>
         </div>
 
         {/* Action Controls Bar */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* AI Voice Toggle */}
+          {/* Format Switcher */}
           <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
             <button
-              onClick={() => setInterviewerGender('female')}
-              className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all ${
-                interviewerGender === 'female' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              onClick={() => setInterviewMode('video')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                interviewMode === 'video' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <span>👩‍💼 Sarah</span>
+              🎥 Video
             </button>
             <button
-              onClick={() => setInterviewerGender('male')}
-              className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all ${
-                interviewerGender === 'male' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              onClick={() => setInterviewMode('voice')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                interviewMode === 'voice' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <span>👨‍💼 David</span>
+              🎙️ Voice
             </button>
           </div>
 
@@ -343,7 +374,7 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
             className={`p-2 rounded-xl border text-xs transition-all ${
               isAudioMuted ? 'bg-red-500/20 border-red-500 text-red-400' : 'bg-slate-900 border-slate-800 text-slate-300'
             }`}
-            title={isAudioMuted ? "Unmute AI Voice" : "Mute AI Voice"}
+            title={isAudioMuted ? "Unmute Panel Voice" : "Mute Panel Voice"}
           >
             {isAudioMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
@@ -354,7 +385,7 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
             className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-red-600/20 cursor-pointer"
           >
             <StopCircle className="w-4 h-4" />
-            <span>End & View Mercor Scorecard</span>
+            <span>End & View Panel Scorecard</span>
           </button>
 
           <button 
@@ -366,14 +397,14 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
         </div>
       </div>
 
-      {/* 🔬 MERCOR REAL-TIME TELEMETRY BAR */}
+      {/* 🔬 PANEL REAL-TIME TELEMETRY BAR */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
         <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-400">
             <User className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Ownership ('I' vs 'We'):</span>
+            <span>Ownership:</span>
           </div>
-          <span className="font-bold text-indigo-300 font-mono">{liveTelemetry.ownership_score || 85}%</span>
+          <span className="font-bold text-indigo-300 font-mono">{liveTelemetry.ownership_score || 85}% ('I' vs 'We')</span>
         </div>
 
         <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between">
@@ -394,10 +425,12 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
 
         <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-400">
-            <Target className="w-3.5 h-3.5 text-purple-400" />
-            <span>Quantified Metrics:</span>
+            <ShieldCheck className={`w-3.5 h-3.5 ${liveTelemetry.physics_anomaly_detected ? 'text-red-400' : 'text-purple-400'}`} />
+            <span>Physics Radar:</span>
           </div>
-          <span className="font-bold text-purple-300">{liveTelemetry.quantified_metrics_count || 1} detected</span>
+          <span className={`font-bold ${liveTelemetry.physics_anomaly_detected ? 'text-red-400' : 'text-purple-300'}`}>
+            {liveTelemetry.physics_anomaly_detected ? 'Anomaly Detected' : '100% Realistic'}
+          </span>
         </div>
       </div>
 
@@ -405,26 +438,30 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
       <div className="p-4 md:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 shadow-xl space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wide">
-              Turn {turnNumber} • {currentPhase}
+            <span className={`text-[10px] font-black px-2.5 py-1 rounded border uppercase tracking-wide ${
+              activeSpeaker === 'sarah' 
+                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+            }`}>
+              Turn {turnNumber} • {activeSpeakerName} ({activeSpeakerTitle})
             </span>
             {isSpeakingAI && (
               <span className="flex items-center gap-1 text-xs text-emerald-400 font-mono animate-pulse">
                 <Volume2 className="w-3.5 h-3.5" />
-                <span>AI Speaking Aloud...</span>
+                <span>{activeSpeakerName.split(' ')[0]} Speaking Aloud...</span>
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-3 text-xs">
             <button
-              onClick={() => speakQuestion(currentQuestion)}
+              onClick={() => speakQuestion(currentQuestion, activeSpeaker)}
               className="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer"
             >
               <Volume2 className="w-3.5 h-3.5" />
               <span>Repeat Question</span>
             </button>
-            <span className="font-mono text-slate-400">Adaptive Turn: #{turnNumber}</span>
+            <span className="font-mono text-slate-400">Turn #{turnNumber}</span>
           </div>
         </div>
 
@@ -433,111 +470,181 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
         </h2>
       </div>
 
-      {/* 🌟 DUAL PRESENTER BOARDROOM GRID (AI INTERVIEWER + CANDIDATE) */}
+      {/* 🌟 DUAL PRESENTER BOARDROOM GRID (AI PANEL + CANDIDATE / WHITEBOARD) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
-        {/* SCREEN 1: AI INTERVIEWER AVATAR */}
-        <div className="relative aspect-video rounded-2xl bg-slate-900 border-2 border-slate-800 overflow-hidden shadow-2xl flex flex-col items-center justify-center p-6">
-          <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full flex items-center justify-center overflow-hidden border-4 border-slate-700 shadow-2xl bg-gradient-to-b from-slate-800 to-slate-950">
-            {isSpeakingAI && (
-              <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" />
-            )}
-            
-            <div className="text-center">
-              <div className="text-5xl md:text-6xl select-none">
-                {interviewerGender === 'female' ? '👩‍💼' : '👨‍💼'}
+        {/* SCREEN 1: 2-PERSON EXECUTIVE PANEL (SARAH & DAVID) */}
+        <div className="relative aspect-video rounded-2xl bg-slate-900 border-2 border-slate-800 overflow-hidden shadow-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              Executive Interview Panel
+            </span>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-950 border border-slate-800 text-[10px] font-mono text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>LIVE PANEL SESSION</span>
+            </div>
+          </div>
+
+          {/* 2 Panelists Side-by-Side */}
+          <div className="grid grid-cols-2 gap-3 my-auto items-center">
+            {/* Panelist 1: Sarah Jenkins */}
+            <div className={`p-3.5 rounded-2xl border-2 transition-all flex flex-col items-center text-center ${
+              activeSpeaker === 'sarah' 
+                ? 'bg-indigo-950/40 border-indigo-500 shadow-xl shadow-indigo-500/20 scale-105' 
+                : 'bg-slate-950/40 border-slate-800 opacity-60'
+            }`}>
+              <div className="relative w-20 h-20 rounded-full flex items-center justify-center border-2 border-indigo-400 bg-gradient-to-b from-indigo-900 to-slate-950 text-4xl select-none mb-2">
+                {activeSpeaker === 'sarah' && isSpeakingAI && (
+                  <div className="absolute inset-0 rounded-full bg-indigo-500/30 animate-ping" />
+                )}
+                👩‍💼
               </div>
+              <h4 className="text-xs font-black text-slate-100">Sarah Jenkins</h4>
+              <p className="text-[10px] text-indigo-300 font-semibold">VP Product & Talent</p>
+              {activeSpeaker === 'sarah' && (
+                <span className="mt-1 px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-200 text-[9px] font-bold uppercase animate-pulse">
+                  Speaking Now
+                </span>
+              )}
+            </div>
+
+            {/* Panelist 2: David Vance */}
+            <div className={`p-3.5 rounded-2xl border-2 transition-all flex flex-col items-center text-center ${
+              activeSpeaker === 'david' 
+                ? 'bg-blue-950/40 border-blue-500 shadow-xl shadow-blue-500/20 scale-105' 
+                : 'bg-slate-950/40 border-slate-800 opacity-60'
+            }`}>
+              <div className="relative w-20 h-20 rounded-full flex items-center justify-center border-2 border-blue-400 bg-gradient-to-b from-blue-900 to-slate-950 text-4xl select-none mb-2">
+                {activeSpeaker === 'david' && isSpeakingAI && (
+                  <div className="absolute inset-0 rounded-full bg-blue-500/30 animate-ping" />
+                )}
+                👨‍💼
+              </div>
+              <h4 className="text-xs font-black text-slate-100">David Vance</h4>
+              <p className="text-[10px] text-blue-300 font-semibold">Staff Principal Architect</p>
+              {activeSpeaker === 'david' && (
+                <span className="mt-1 px-2 py-0.5 rounded bg-blue-500/30 text-blue-200 text-[9px] font-bold uppercase animate-pulse">
+                  Speaking Now
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="mt-4 text-center space-y-1">
-            <div className="flex items-center justify-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${isSpeakingAI ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-              <h3 className="text-sm font-extrabold text-slate-100">
-                {interviewerGender === 'female' ? 'Sarah Jenkins' : 'David Vance'}
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              {interviewerGender === 'female' ? 'Principal Talent Partner • Mercor AI' : 'Senior Staff Architect • Mercor AI'}
-            </p>
-          </div>
-
-          <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between px-4 py-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-800">
-            <span className="text-xs text-slate-400 font-mono">
-              {isSpeakingAI ? 'AI Probing Question Active' : 'Listening & Analyzing Logic...'}
+          {/* Bottom Audio Status */}
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs">
+            <span className="text-[11px] text-slate-400 font-mono">
+              {isSpeakingAI ? `${activeSpeakerName} is speaking...` : 'Panelists analyzing your architecture...'}
             </span>
             <div className="flex items-center gap-1">
-              {[12, 24, 16, 32, 20, 28, 14, 22, 30, 18].map((h, i) => (
+              {[10, 20, 14, 26, 18, 24, 12, 22, 16].map((h, i) => (
                 <span 
                   key={i} 
-                  className={`w-1 rounded-full ${isSpeakingAI ? 'bg-indigo-400 animate-pulse' : 'bg-slate-700'}`}
-                  style={{ height: isSpeakingAI ? `${h}px` : '6px' }}
+                  className={`w-1 rounded-full ${isSpeakingAI ? (activeSpeaker === 'sarah' ? 'bg-indigo-400' : 'bg-blue-400') + ' animate-pulse' : 'bg-slate-700'}`}
+                  style={{ height: isSpeakingAI ? `${h}px` : '4px' }}
                 />
               ))}
             </div>
           </div>
         </div>
 
-        {/* SCREEN 2: CANDIDATE LIVE WEBCAM & TRANSCRIPTION */}
-        <div className="relative aspect-video rounded-2xl bg-slate-950 border-2 border-slate-800 overflow-hidden shadow-2xl flex flex-col items-center justify-center">
-          {cameraActive ? (
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted 
-              className="w-full h-full object-cover mirror"
-              style={{ transform: 'scaleX(-1)' }}
-            />
-          ) : (
-            <div className="text-center space-y-3 p-6 text-slate-400">
-              <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-700 mx-auto flex items-center justify-center text-slate-300">
-                <Mic className="w-8 h-8 text-emerald-400" />
-              </div>
-              <p className="text-xs font-bold text-slate-200">Voice-Only Microphone Mode Active</p>
-              <p className="text-[11px] text-slate-500">Camera disabled for privacy</p>
-            </div>
-          )}
-
-          {isRecording && (
-            <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/95 text-white text-xs font-black shadow-lg animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-white" />
-              <span>REC 00:{(durationSeconds % 60).toString().padStart(2, '0')}</span>
-            </div>
-          )}
-
-          <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-slate-900/90 border border-slate-700 text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5">
-            <Radio className="w-3.5 h-3.5 animate-pulse" />
-            <span>Mercor Telemetry Active</span>
+        {/* SCREEN 2: CANDIDATE DUAL-MODAL VIEW (WEBCAM OR ARCHITECTURE WHITEBOARD) */}
+        <div className="relative aspect-video rounded-2xl bg-slate-950 border-2 border-slate-800 overflow-hidden shadow-2xl flex flex-col">
+          {/* Tab Switcher for Right Screen */}
+          <div className="absolute top-3 right-3 z-20 flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-xl p-1 text-xs">
+            <button
+              onClick={() => setActiveRightTab('camera')}
+              className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all ${
+                activeRightTab === 'camera' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>Camera</span>
+            </button>
+            <button
+              onClick={() => setActiveRightTab('whiteboard')}
+              className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all ${
+                activeRightTab === 'whiteboard' ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Code className="w-3.5 h-3.5" />
+              <span>Architecture Canvas</span>
+            </button>
           </div>
 
-          <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between px-4 py-2 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-800">
-            <span className="text-xs text-slate-400 font-mono">
-              {isRecording ? 'Capturing Spoken Response' : 'Click "Start Answer" to record'}
-            </span>
-            <div className="flex items-center gap-1">
-              {[12, 24, 16, 32, 20, 28, 14, 22, 30, 18].map((h, i) => (
-                <span 
-                  key={i} 
-                  className={`w-1 rounded-full ${isRecording ? 'bg-emerald-400 animate-pulse' : 'bg-slate-700'}`}
-                  style={{ height: isRecording ? `${h}px` : '6px' }}
+          {activeRightTab === 'camera' ? (
+            /* Webcam Stream */
+            <div className="w-full h-full relative flex items-center justify-center">
+              {cameraActive ? (
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  playsInline 
+                  muted 
+                  className="w-full h-full object-cover mirror"
+                  style={{ transform: 'scaleX(-1)' }}
                 />
-              ))}
+              ) : (
+                <div className="text-center space-y-2 p-6 text-slate-400">
+                  <Mic className="w-10 h-10 text-emerald-400 mx-auto" />
+                  <p className="text-xs font-bold text-slate-200">Voice-Only Microphone Active</p>
+                </div>
+              )}
+
+              {/* Recording Badge */}
+              {isRecording && (
+                <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/95 text-white text-xs font-black shadow-lg animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-white" />
+                  <span>REC 00:{(durationSeconds % 60).toString().padStart(2, '0')}</span>
+                </div>
+              )}
+
+              {/* Bottom Audio Waveform */}
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-950/80 backdrop-blur-md border border-slate-800">
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {isRecording ? 'Capturing Candidate Defense' : 'Click "Start Answer" to record'}
+                </span>
+                <div className="flex items-center gap-1">
+                  {[12, 24, 16, 32, 20, 28, 14, 22, 30].map((h, i) => (
+                    <span 
+                      key={i} 
+                      className={`w-1 rounded-full ${isRecording ? 'bg-emerald-400 animate-pulse' : 'bg-slate-700'}`}
+                      style={{ height: isRecording ? `${h}px` : '4px' }}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Live Architecture & Code Whiteboard Canvas */
+            <div className="w-full h-full flex flex-col p-4 bg-slate-950 space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-bold text-purple-300 flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span>Architecture Whiteboard & Code Editor:</span>
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">Evaluated by David Vance</span>
+              </div>
+              <textarea
+                value={whiteboardCode}
+                onChange={e => setWhiteboardCode(e.target.value)}
+                placeholder="Type SQL schema, caching locks, or ASCII architecture diagrams here..."
+                className="flex-1 w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-purple-500 resize-none"
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Answer Box & Mercor Progression Controls */}
+      {/* Answer Box & Panel Progression Controls */}
       <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span className="font-bold text-slate-300">Candidate Spoken Response (Speech-to-Text / Edit):</span>
-          <span className="text-emerald-400 font-semibold">{isRecording ? '🎙️ Transcribing Spoken Audio...' : 'Paused'}</span>
+          <span className="font-bold text-slate-300">Candidate Spoken Response (Speech-to-Text):</span>
+          <span className="text-emerald-400 font-semibold">{isRecording ? '🎙️ Transcribing Voice...' : 'Paused'}</span>
         </div>
 
         <textarea
           value={currentAnswer}
           onChange={e => setCurrentAnswer(e.target.value)}
-          placeholder="Speak your technical defense into the microphone, or type your answer here..."
+          placeholder="Speak your response clearly into the microphone..."
           rows={2}
           className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 resize-none font-sans"
         />
@@ -571,7 +678,7 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
               className="px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
             >
               <StopCircle className="w-4 h-4 text-amber-400" />
-              <span>End & View Mercor Scorecard</span>
+              <span>End & View Panel Scorecard</span>
             </button>
 
             <button
@@ -579,7 +686,7 @@ export const VideoInterviewArena: React.FC<VideoInterviewArenaProps> = ({
               disabled={isLoadingTurn}
               className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-50"
             >
-              <span>{isLoadingTurn ? 'Mercor Analyzing...' : `Submit Turn & Get Follow-Up Probe ➔`}</span>
+              <span>{isLoadingTurn ? 'Panel Evaluating...' : `Submit Defense to Panel ➔`}</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

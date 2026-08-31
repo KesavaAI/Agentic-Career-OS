@@ -387,7 +387,7 @@ export const api = {
   // 🔬 Mercor-Style Autonomous AI Conversational Engine
   mercorStart: (data: { role?: string; company?: string }) =>
     fetchApi<any>('/mock-interview/mercor-start', { method: 'POST', body: JSON.stringify(data) }),
-  mercorTurn: (data: { role?: string; company?: string; history: any[]; latest_answer: string; turn_number: number }) =>
+  mercorTurn: (data: { role?: string; company?: string; history: any[]; latest_answer: string; whiteboard_code?: string; turn_number: number }) =>
     fetchApi<any>('/mock-interview/mercor-turn', { method: 'POST', body: JSON.stringify(data) }),
   mercorEvaluate: (data: { role?: string; company?: string; turns: any[]; total_duration_seconds?: number }) =>
     fetchApi<any>('/mock-interview/mercor-evaluate', { method: 'POST', body: JSON.stringify(data) }),

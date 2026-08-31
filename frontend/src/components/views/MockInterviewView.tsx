@@ -3,7 +3,7 @@ import {
   Sparkles, Play, Video, Mic, Award, CheckCircle2, 
   AlertTriangle, Clock, Volume2, ArrowRight, ShieldAlert,
   Flame, BarChart3, RotateCcw, Target, HelpCircle, FileText,
-  Headphones, MessageSquare, UserCheck 
+  Headphones, MessageSquare, UserCheck, Terminal, ShieldCheck 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
@@ -14,9 +14,8 @@ export const MockInterviewView: React.FC = () => {
   const { user } = useAuth();
   const [viewState, setViewState] = useState<'readiness' | 'video_arena' | 'diagnostic'>('readiness');
   const [targetCompany, setTargetCompany] = useState('Acme');
-  const [targetRole, setTargetRole] = useState(user?.target_role || 'Data Analyst');
+  const [targetRole, setTargetRole] = useState(user?.target_role || 'Full Stack / Web Development');
   const [selectedMode, setSelectedMode] = useState<'video' | 'voice' | 'text'>('video');
-  const [selectedGender, setSelectedGender] = useState<'female' | 'male'>('female');
 
   const [readinessData, setReadinessData] = useState<any>(null);
   const [evaluationReport, setEvaluationReport] = useState<any>(null);
@@ -33,16 +32,15 @@ export const MockInterviewView: React.FC = () => {
       setReadinessData(data);
     } catch (err) {
       console.error('Failed to load video readiness diagnostic:', err);
-      // Clean fallback
       setReadinessData({
-        target_role: `${(targetRole || 'DATA ANALYST').toUpperCase()} — ${targetCompany.toUpperCase()}`,
-        overall_readiness_pct: 72,
+        target_role: `${(targetRole || 'FULL STACK').toUpperCase()} — ${targetCompany.toUpperCase()}`,
+        overall_readiness_pct: 76,
         dimensions: {
           resume_match_pct: 91,
-          technical_depth_pct: 78,
-          communication_clarity_pct: 69,
-          star_answers_pct: 61,
-          confidence_delivery_pct: 74
+          technical_depth_pct: 82,
+          communication_clarity_pct: 72,
+          star_answers_pct: 64,
+          confidence_delivery_pct: 78
         }
       });
     } finally {
@@ -51,55 +49,17 @@ export const MockInterviewView: React.FC = () => {
   };
 
   const handleFinishVideoSession = async (sessionData: any) => {
-    try {
-      setLoading(true);
-      const report = await api.evaluateVideoSession(sessionData);
-      setEvaluationReport(report);
-      setViewState('diagnostic');
-    } catch (err) {
-      console.error('Failed to evaluate video session:', err);
-      // Clean fallback
-      setEvaluationReport({
-        target_role: targetRole,
-        company: targetCompany,
-        overall_score: 76,
-        strengths: ["✓ Strong SQL explanation", "✓ Good project knowledge"],
-        warnings: [
-          "⚠ Answers too long",
-          "⚠ Weak business impact",
-          "⚠ 14 filler words/minute",
-          "⚠ STAR structure missing"
-        ],
-        question_breakdowns: [
-          {
-            question_number: 6,
-            question: "Tell me about your most challenging project.",
-            candidate_answer: "In our team project, we had to analyze customer churn. I used SQL and Python to extract the database tables and built some dashboards. It helped the team see which users were leaving.",
-            score: 68,
-            why_was_this_weak: "Your answer jumped immediately into tooling without framing the business stakes (Situation/Task). You described passive actions ('built some dashboards') instead of proactive engineering decisions, and completely omitted the final metric outcome (e.g., 'reduced churn by 14% saving $120k ARR').",
-            ideal_star_rewrite: {
-              situation: "At my previous company, quarterly subscriber churn unexpectedly increased by 18%, risking $450k in annual recurring revenue.",
-              task: "I was tasked with identifying the leading indicators of user drop-off across 500,000 active customer records within 2 weeks.",
-              action: "I engineered automated SQL cohort analysis queries with window functions, isolated the churn trigger to a mobile checkout latency bottleneck, and built an automated churn-risk alert pipeline.",
-              result: "Product leadership deployed targeted checkout optimizations, decreasing drop-offs by 24% and recovering $180k in ARR in Q3."
-            }
-          }
-        ]
-      });
-      setViewState('diagnostic');
-    } finally {
-      setLoading(false);
-    }
+    setEvaluationReport(sessionData);
+    setViewState('diagnostic');
   };
 
-  // 1. Video / Voice Arena View
+  // 1. Executive Panel Video Arena View
   if (viewState === 'video_arena') {
     return (
       <VideoInterviewArena
         role={targetRole}
         company={targetCompany}
         initialMode={selectedMode}
-        initialInterviewerGender={selectedGender}
         onFinishSession={handleFinishVideoSession}
         onCancel={() => setViewState('readiness')}
       />
@@ -120,10 +80,10 @@ export const MockInterviewView: React.FC = () => {
   // 3. Pre-Interview Readiness View (Default)
   const dims = readinessData?.dimensions || {
     resume_match_pct: 91,
-    technical_depth_pct: 78,
-    communication_clarity_pct: 69,
-    star_answers_pct: 61,
-    confidence_delivery_pct: 74
+    technical_depth_pct: 82,
+    communication_clarity_pct: 72,
+    star_answers_pct: 64,
+    confidence_delivery_pct: 78
   };
 
   return (
@@ -131,12 +91,12 @@ export const MockInterviewView: React.FC = () => {
       {/* Target Setup Controls */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md">
         <div className="flex items-center gap-3">
-          <span className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+          <span className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
             <Video className="w-5 h-5" />
           </span>
           <div>
-            <h3 className="font-extrabold text-sm text-slate-100">AI Mock Interview Simulator</h3>
-            <p className="text-xs text-slate-400">Live camera, audio visualizer, real-time filler word audit & voice synthesis</p>
+            <h3 className="font-extrabold text-sm text-slate-100">Super-Mercor Executive AI Panel Simulator</h3>
+            <p className="text-xs text-slate-400">Tag-team evaluation by Sarah Jenkins (VP Talent) & David Vance (Staff Architect)</p>
           </div>
         </div>
 
@@ -146,42 +106,70 @@ export const MockInterviewView: React.FC = () => {
             value={targetRole}
             onChange={e => setTargetRole(e.target.value)}
             placeholder="Target Role"
-            className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+            className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
           />
           <input
             type="text"
             value={targetCompany}
             onChange={e => setTargetCompany(e.target.value)}
             placeholder="Target Company"
-            className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+            className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
           />
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 🎯 PRE-INTERVIEW READINESS CARD */}
+      {/* 🎯 PRE-INTERVIEW READINESS & PANEL BRIEFING */}
       {/* ========================================================================= */}
       <div className="p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6 text-center">
-        {/* Header Title */}
         <div className="space-y-1">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-[10px] font-black px-2.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
+              Tag-Team Executive Boardroom
+            </span>
+          </div>
           <h2 className="text-2xl md:text-3xl font-black text-slate-100 uppercase tracking-wide">
             {targetRole.toUpperCase()} — {targetCompany.toUpperCase()}
           </h2>
-          <div className="h-0.5 w-32 bg-emerald-500 mx-auto rounded-full mt-2" />
+          <div className="h-0.5 w-32 bg-indigo-500 mx-auto rounded-full mt-2" />
+        </div>
+
+        {/* 2 Panelists Preview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto text-left">
+          <div className="p-3.5 rounded-2xl bg-slate-950 border border-indigo-500/30 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-indigo-950 border border-indigo-400 flex items-center justify-center text-2xl select-none">
+              👩‍💼
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-100">Sarah Jenkins</h4>
+              <p className="text-[11px] text-indigo-300">VP Talent & Product</p>
+              <p className="text-[10px] text-slate-400">Ownership, Business ROI & STAR</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-950 border border-blue-500/30 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-blue-950 border border-blue-400 flex items-center justify-center text-2xl select-none">
+              👨‍💼
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-100">David Vance</h4>
+              <p className="text-[11px] text-blue-300">Staff Principal Architect</p>
+              <p className="text-[10px] text-slate-400">Concurrency, Scale & Whiteboard</p>
+            </div>
+          </div>
         </div>
 
         {/* Overall Readiness Gauge */}
         <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 max-w-sm mx-auto flex items-center justify-between">
           <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Interview Readiness:</span>
-          <span className="text-3xl font-black text-emerald-400">{readinessData?.overall_readiness_pct || 72}%</span>
+          <span className="text-3xl font-black text-emerald-400">{readinessData?.overall_readiness_pct || 76}%</span>
         </div>
 
         {/* 5-Dimensional Metrics Breakdown */}
-        <div className="space-y-3.5 max-w-md mx-auto text-left text-xs font-semibold pt-2">
-          {/* 1. Resume Match */}
+        <div className="space-y-3 max-w-md mx-auto text-left text-xs font-semibold pt-1">
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-slate-300">Resume Match</span>
+              <span className="text-slate-300">Resume & Project Match</span>
               <span className="font-mono font-bold text-emerald-400">{dims.resume_match_pct}%</span>
             </div>
             <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
@@ -189,10 +177,9 @@ export const MockInterviewView: React.FC = () => {
             </div>
           </div>
 
-          {/* 2. Technical Depth */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-slate-300">Technical Depth</span>
+              <span className="text-slate-300">Technical Depth (Scale & Locks)</span>
               <span className="font-mono font-bold text-blue-400">{dims.technical_depth_pct}%</span>
             </div>
             <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
@@ -200,10 +187,9 @@ export const MockInterviewView: React.FC = () => {
             </div>
           </div>
 
-          {/* 3. Communication */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-slate-300">Communication Clarity</span>
+              <span className="text-slate-300">Communication Compression (&lt;90s)</span>
               <span className="font-mono font-bold text-indigo-400">{dims.communication_clarity_pct}%</span>
             </div>
             <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
@@ -211,10 +197,9 @@ export const MockInterviewView: React.FC = () => {
             </div>
           </div>
 
-          {/* 4. STAR Answers */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-slate-300">STAR Answers</span>
+              <span className="text-slate-300">STAR Structure & Ownership</span>
               <span className="font-mono font-bold text-amber-400">{dims.star_answers_pct}%</span>
             </div>
             <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
@@ -222,7 +207,6 @@ export const MockInterviewView: React.FC = () => {
             </div>
           </div>
 
-          {/* 5. Confidence */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-slate-300">Confidence & Delivery</span>
@@ -234,82 +218,35 @@ export const MockInterviewView: React.FC = () => {
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* 🎙️ PRE-SESSION MODE & INTERVIEWER VOICE SELECTOR */}
-        {/* ========================================================================= */}
-        <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 max-w-md mx-auto space-y-4 text-left">
-          {/* Mode Selector */}
-          <div>
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-              Select Practice Format:
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => setSelectedMode('video')}
-                className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                  selectedMode === 'video' 
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' 
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Video className="w-4 h-4" />
-                <span className="text-xs font-bold">🎥 Video</span>
-              </button>
+        {/* Format Selector */}
+        <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 max-w-md mx-auto space-y-2 text-left">
+          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+            Select Practice Format:
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setSelectedMode('video')}
+              className={`p-3 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                selectedMode === 'video' 
+                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' 
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Video className="w-4 h-4" />
+              <span className="text-xs font-bold">🎥 Video + Whiteboard</span>
+            </button>
 
-              <button
-                onClick={() => setSelectedMode('voice')}
-                className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                  selectedMode === 'voice' 
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' 
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Headphones className="w-4 h-4" />
-                <span className="text-xs font-bold">🎙️ Voice-Only</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedMode('text')}
-                className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                  selectedMode === 'text' 
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' 
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span className="text-xs font-bold">💬 Text</span>
-              </button>
-            </div>
-          </div>
-
-          {/* AI Voice Persona Selector */}
-          <div>
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-              Select AI Interviewer Voice:
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setSelectedGender('female')}
-                className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
-                  selectedGender === 'female' 
-                    ? 'bg-indigo-600/30 border-indigo-500 text-indigo-300' 
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>👩‍💼 Sarah (Female)</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedGender('male')}
-                className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
-                  selectedGender === 'male' 
-                    ? 'bg-blue-600/30 border-blue-500 text-blue-300' 
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>👨‍💼 David (Male)</span>
-              </button>
-            </div>
+            <button
+              onClick={() => setSelectedMode('voice')}
+              className={`p-3 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                selectedMode === 'voice' 
+                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' 
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Headphones className="w-4 h-4" />
+              <span className="text-xs font-bold">🎙️ Voice-Only Mode</span>
+            </button>
           </div>
         </div>
 
@@ -317,13 +254,13 @@ export const MockInterviewView: React.FC = () => {
         <div className="pt-2">
           <button
             onClick={() => setViewState('video_arena')}
-            className="px-10 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm tracking-wide uppercase shadow-2xl shadow-emerald-500/30 flex items-center gap-3 mx-auto transition-transform hover:scale-105 cursor-pointer"
+            className="px-10 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm tracking-wide uppercase shadow-2xl shadow-indigo-600/30 flex items-center gap-3 mx-auto transition-transform hover:scale-105 cursor-pointer"
           >
-            {selectedMode === 'video' ? <Video className="w-5 h-5 fill-slate-950" /> : <Headphones className="w-5 h-5" />}
-            <span>[ START {selectedMode === 'video' ? 'VIDEO' : selectedMode === 'voice' ? 'VOICE' : 'SIMULATION'} INTERVIEW ]</span>
+            <Video className="w-5 h-5 fill-white" />
+            <span>[ ENTER EXECUTIVE PANEL BOARDROOM ]</span>
           </button>
           <p className="text-[11px] text-slate-500 mt-2">
-            Interviewer speaks aloud • Can stop and evaluate at any time
+            Sarah & David speak aloud • Real-time Physics Radar & Whiteboard • Stop at any time
           </p>
         </div>
       </div>

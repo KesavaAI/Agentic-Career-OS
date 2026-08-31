@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   Award, AlertTriangle, CheckCircle2, Play, FileText, 
   HelpCircle, RotateCcw, ChevronDown, ChevronUp, Sparkles, 
-  ArrowRight, X, Volume2, Video, StopCircle, User, Zap, Clock, Target 
+  ArrowRight, X, Volume2, Video, StopCircle, User, Zap, Clock, Target,
+  BookOpen, ShieldCheck, Check 
 } from 'lucide-react';
 
 interface PostInterviewDiagnosticViewProps {
@@ -28,81 +29,155 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
     quantified_impact_score: 75
   };
 
-  const turnsList = report?.turn_breakdowns || report?.question_breakdowns || [];
+  const panelScores = report?.panel_scores || {
+    sarah_behavioral_score: 84,
+    david_architecture_score: 80
+  };
+
+  const turnsList = report?.turn_breakdowns || [];
   const activeTurn = turnsList.find((t: any) => (t.turn_number || t.question_number) === activeTabTurn) || 
     turnsList[0] || {
       turn_number: 1,
-      question: "Tell me about a challenging technical project you owned end-to-end. Walk me through the architecture and the hardest technical decision you made.",
+      interviewer: "sarah",
+      interviewer_name: "Sarah Jenkins",
+      question: "Welcome! Walk me through the core architecture, the business problem it solved, and your specific individual contribution.",
       candidate_answer: "(No spoken answer recorded)",
       telemetry: {
         ownership_score: 80,
         depth_label: "Layer 2: Technical Trade-Offs",
-        compression_rating: "Optimal (<90s)",
+        compression_rating: "Optimal",
         quantified_metrics_count: 1
       },
-      why_was_this_weak: "Your answer focused heavily on high-level tooling. To rank in the top 5% of Mercor candidates, articulate the specific trade-offs (e.g. why Redis over Memcached) and quantify your impact with latency numbers.",
+      why_was_this_weak: "Your answer focused on high-level tooling. To satisfy Staff Architect David Vance, articulate the exact trade-offs (e.g. why Redis over Memcached) and quantify your impact with latency numbers.",
       ideal_star_rewrite: {
-        situation: "At my previous company, our real-time notification service faced cascading bottlenecks during traffic spikes.",
-        task: "I was tasked with redesigning the ingestion pipeline to support 50,000 concurrent websocket connections.",
+        situation: "At my previous company, our notification pipeline suffered cascading timeout drops under peak load.",
+        task: "I was tasked with redesigning the ingestion architecture to handle 50,000 concurrent websocket connections.",
         action: "I implemented a Redis pub/sub cluster with connection pooling and automated backpressure buffers.",
-        result: "Reduced P99 latency from 450ms to 12ms and eliminated 100% of connection timeout drops."
+        result: "Reduced P99 latency from 450ms to 12ms and eliminated 100% of dropped connection timeouts."
       }
     };
+
+  const flywheelTopic = report?.flywheel_remediation?.recommended_topic || "High-Concurrency Concurrency & Caching Invalidation";
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Header Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-purple-950/40 to-slate-900 border border-purple-500/30 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] font-black px-2.5 py-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider">
-            Mercor AI Autonomous Interview Scorecard
+          <span className="text-[10px] font-black px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+            Executive Panel Diagnostic Scorecard
           </span>
           <h2 className="text-2xl font-black text-slate-100 mt-2">
             {report?.company?.toUpperCase() || 'ACME'} — {report?.target_role?.toUpperCase() || 'FULL STACK ENGINEER'}
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            4-Pillar Evaluation: Ownership, Technical Depth, Compression & Quantified Impact
+            Evaluated by Sarah Jenkins (VP Talent) & David Vance (Staff Principal Architect)
           </p>
         </div>
 
         <div className="flex items-center gap-4 bg-slate-950/70 p-4 rounded-xl border border-slate-800">
           <div className="text-center">
-            <p className="text-[10px] font-bold text-slate-500 uppercase">Mercor Score</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase">Panel Score</p>
             <p className="text-3xl font-black text-emerald-400 mt-0.5">
-              {report?.overall_score || 78}/100
+              {report?.overall_score || 82}/100
             </p>
           </div>
           <div className="h-10 w-px bg-slate-800" />
           <div className="text-left text-xs">
-            <p className="font-bold text-slate-200">{report?.rating_tier || 'Top 10% Mercor Pool'}</p>
-            <p className="text-[11px] text-emerald-400">High-Probability Placement</p>
+            <p className="font-bold text-slate-200">{report?.rating_tier || 'Top 10% Executive Talent'}</p>
+            <p className="text-[11px] text-emerald-400 font-semibold">High-Probability Placement</p>
           </div>
         </div>
       </div>
 
-      {/* 🔬 MERCOR 4-PILLAR RUBRIC CARDS */}
+      {/* 👥 EXECUTIVE PANEL SPLIT SCORES */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Sarah Jenkins Scorecard */}
+        <div className="p-5 rounded-2xl bg-slate-900 border border-indigo-500/30 shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-full border-2 border-indigo-400 bg-indigo-950 flex items-center justify-center text-2xl select-none">
+              👩‍💼
+            </div>
+            <div>
+              <h4 className="text-sm font-extrabold text-slate-100">Sarah Jenkins (VP Talent & Product)</h4>
+              <p className="text-xs text-indigo-300">Behavioral Ownership, Compression & ROI</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-black text-indigo-300">{panelScores.sarah_behavioral_score || 84}/100</p>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-200 uppercase">
+              Strong Pass
+            </span>
+          </div>
+        </div>
+
+        {/* David Vance Scorecard */}
+        <div className="p-5 rounded-2xl bg-slate-900 border border-blue-500/30 shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-full border-2 border-blue-400 bg-blue-950 flex items-center justify-center text-2xl select-none">
+              👨‍💼
+            </div>
+            <div>
+              <h4 className="text-sm font-extrabold text-slate-100">David Vance (Staff Architect)</h4>
+              <p className="text-xs text-blue-300">Scale, Failure Modes & Architecture Rigor</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-black text-blue-300">{panelScores.david_architecture_score || 80}/100</p>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-200 uppercase">
+              Competitive
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 🚀 CLOSED-LOOP CAREER FLYWHEEL AUTO-REMEDIATION BANNER */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-indigo-950/40 border border-emerald-500/30 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
+            <Sparkles className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 uppercase">
+                Career Flywheel Ingestion Active
+              </span>
+              <span className="text-xs text-slate-400">Auto-Seeded 30-Day Spaced Repetition Topic</span>
+            </div>
+            <p className="text-sm font-bold text-slate-100 mt-0.5">
+              "{flywheelTopic}"
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onDone}
+          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer self-end md:self-auto"
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>View in Learning Center</span>
+        </button>
+      </div>
+
+      {/* 🔬 4-PILLAR RUBRIC CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        {/* 1. Ownership */}
         <div className="p-4 rounded-xl bg-slate-900 border border-indigo-500/30 shadow-md space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-slate-400 uppercase">1. Individual Ownership</span>
             <User className="w-4 h-4 text-indigo-400" />
           </div>
           <p className="text-2xl font-black text-indigo-300">{pillars.ownership_score}%</p>
-          <p className="text-[11px] text-slate-400">'I' vs 'We' Pronoun Density</p>
+          <p className="text-[11px] text-slate-400">'I' vs 'We' Density</p>
         </div>
 
-        {/* 2. Technical Depth */}
         <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/30 shadow-md space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-slate-400 uppercase">2. Technical Depth</span>
             <Zap className="w-4 h-4 text-amber-400" />
           </div>
           <p className="text-2xl font-black text-amber-300">{pillars.technical_depth_score}%</p>
-          <p className="text-[11px] text-slate-400">3-Layers Deep (Scale/Trade-offs)</p>
+          <p className="text-[11px] text-slate-400">3-Layers Deep (Scale/Locks)</p>
         </div>
 
-        {/* 3. Compression */}
         <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/30 shadow-md space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-slate-400 uppercase">3. Compression</span>
@@ -112,24 +187,22 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
           <p className="text-[11px] text-slate-400">Fluff-Free (&lt;90s Answers)</p>
         </div>
 
-        {/* 4. Quantified Impact */}
         <div className="p-4 rounded-xl bg-slate-900 border border-purple-500/30 shadow-md space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-slate-400 uppercase">4. Quantified Impact</span>
             <Target className="w-4 h-4 text-purple-400" />
           </div>
           <p className="text-2xl font-black text-purple-300">{pillars.quantified_impact_score}%</p>
-          <p className="text-[11px] text-slate-400">Before & After Metrics (%, ms, $)</p>
+          <p className="text-[11px] text-slate-400">Before/After Numbers (%, ms, $)</p>
         </div>
       </div>
 
       {/* Strengths & Critical Warnings */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Strengths */}
         <div className="p-5 rounded-xl bg-slate-900 border border-emerald-500/30 shadow-md space-y-3">
           <div className="flex items-center gap-2 text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
-            <h3 className="text-xs font-extrabold uppercase tracking-wider">Identified Mercor Strengths</h3>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider">Identified Panel Strengths</h3>
           </div>
           <ul className="space-y-2 text-xs text-slate-200 font-medium">
             {(report?.strengths || [
@@ -143,11 +216,10 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
           </ul>
         </div>
 
-        {/* Critical Warnings */}
         <div className="p-5 rounded-xl bg-slate-900 border border-amber-500/30 shadow-md space-y-3">
           <div className="flex items-center gap-2 text-amber-400">
             <AlertTriangle className="w-4 h-4" />
-            <h3 className="text-xs font-extrabold uppercase tracking-wider">Mercor Areas to Optimize</h3>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider">Panel Areas to Optimize</h3>
           </div>
           <ul className="space-y-2 text-xs text-slate-200 font-medium">
             {(report?.warnings || [
@@ -173,11 +245,11 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
               onClick={() => setActiveTabTurn(tNum)}
               className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                   : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
               }`}
             >
-              Adaptive Turn {tNum}
+              Turn {tNum} ({t.interviewer === 'david' ? '👨‍💼 David' : '👩‍💼 Sarah'})
             </button>
           );
         })}
@@ -187,8 +259,8 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-6">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase">
-              Adaptive Turn {activeTurn.turn_number || activeTurn.question_number || 1} • {activeTurn.phase || 'Technical Cross-Examination'}
+            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
+              Turn {activeTurn.turn_number || 1} • Asked by {activeTurn.interviewer === 'david' ? 'David Vance (Staff Architect)' : 'Sarah Jenkins (VP Talent)'}
             </span>
           </div>
           <h3 className="text-lg font-bold text-slate-100">
@@ -236,7 +308,7 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
 
           <button
             onClick={() => onPracticeAgain(activeTurn.turn_number || 1)}
-            className="p-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center gap-2 text-xs font-black transition-all cursor-pointer shadow-lg shadow-purple-600/20"
+            className="p-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2 text-xs font-black transition-all cursor-pointer shadow-lg shadow-indigo-600/20"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Practice Turn Again</span>
@@ -277,17 +349,17 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
 
             <div className="flex items-center gap-2 text-amber-400">
               <AlertTriangle className="w-5 h-5" />
-              <h3 className="text-base font-extrabold">Mercor Forensic Critique</h3>
+              <h3 className="text-base font-extrabold">Executive Panel Forensic Critique</h3>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 leading-relaxed">
-              <p className="font-bold text-amber-300 mb-1">Mercor Evaluator Analysis:</p>
+              <p className="font-bold text-amber-300 mb-1">Panelist Analysis:</p>
               {activeTurn.why_was_this_weak || "Ensure you articulate specific trade-offs and quantify before-and-after results."}
             </div>
 
             <div className="space-y-2">
               <h4 className="text-xs font-extrabold uppercase text-emerald-400 tracking-wider">
-                Ideal Top-1% Mercor Candidate Response:
+                Ideal Top-1% Executive Candidate Response:
               </h4>
               <div className="space-y-2 text-xs">
                 <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
@@ -315,7 +387,7 @@ export const PostInterviewDiagnosticView: React.FC<PostInterviewDiagnosticViewPr
                   setShowWeakModal(false);
                   onPracticeAgain(activeTurn.turn_number || 1);
                 }}
-                className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs flex items-center gap-2 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Practice Turn {activeTurn.turn_number || 1} Again</span>

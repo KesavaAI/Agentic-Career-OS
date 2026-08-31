@@ -205,7 +205,14 @@ def recalculate_all_job_matches(db: Session = Depends(get_db)):
     p_dict = profile.__dict__ if profile else {}
     jobs = db.query(Job).filter(Job.is_archived == False).all()
     
-    existing_matches = {jm.job_id: jm for jm in db.query(JobMatch).all()}
+    existing_matches = {}
+    for jm in db.query(JobMatch).all():
+        if jm.job_id in existing_matches:
+            db.delete(jm)
+        else:
+            existing_matches[jm.job_id] = jm
+    db.flush()
+
     updated_count = 0
     valid_cols = set(JobMatch.__table__.columns.keys())
     

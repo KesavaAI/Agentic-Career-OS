@@ -1,3 +1,4 @@
+import { AgentFleetHUD } from '../agent/AgentFleetHUD';
 import React, { useState, useEffect } from 'react';
 import { Send, Plus, Search, Calendar, ChevronRight, Clock, CheckCircle2, FileText, ArrowRight, Trash2, RotateCcw, AlertTriangle, Zap } from 'lucide-react';
 import { api } from '../../lib/api';
@@ -70,6 +71,9 @@ export const ApplicationsView: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* 🛸 UNIVERSAL AGENT FLEET HUD */}
+      <AgentFleetHUD onDirectiveApplied={loadApps} />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>

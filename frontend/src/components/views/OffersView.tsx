@@ -1,3 +1,4 @@
+import { AgentFleetHUD } from '../agent/AgentFleetHUD';
 import React, { useState, useEffect } from 'react';
 import { Trophy, DollarSign, Award, CheckCircle2, ChevronRight, Sparkles, MessageSquare, Mail, Copy, Check, Zap, TrendingUp, ShieldAlert } from 'lucide-react';
 import { api } from '../../lib/api';
@@ -70,6 +71,9 @@ export const OffersView: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-16">
+      {/* 🛸 UNIVERSAL AGENT FLEET HUD */}
+      <AgentFleetHUD onDirectiveApplied={loadOffers} />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-emerald-950/30 to-slate-900 border border-emerald-500/20 shadow-xl">
         <div>

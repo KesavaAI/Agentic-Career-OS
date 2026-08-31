@@ -21,6 +21,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab, onO
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Autopilot Status Widget State
+  const [autopilotStatus, setAutopilotStatus] = useState<any | null>(null);
+  const [pulsingCycle, setPulsingCycle] = useState(false);
+  const [pulseSuccess, setPulseSuccess] = useState<string | null>(null);
+
+  const loadAutopilotWidget = async () => {
+    try {
+      const res = await api.getAutopilotStatus();
+      setAutopilotStatus(res);
+    } catch {}
+  };
+
+  const handlePulseNow = async () => {
+    try {
+      setPulsingCycle(true);
+      setPulseSuccess(null);
+      await api.triggerAutopilotCycle();
+      setPulseSuccess('✓ Pulse Finished!');
+      await loadDashboardData();
+      await loadAutopilotWidget();
+      setTimeout(() => setPulseSuccess(null), 4000);
+    } catch (err: any) {
+      alert('Cycle trigger failed: ' + err.message);
+    } finally {
+      setPulsingCycle(false);
+    }
+  };
+
   // Interactive Flashcard Modal State
   const [activeFlashcard, setActiveFlashcard] = useState<any | null>(null);
   const [submittingRecall, setSubmittingRecall] = useState(false);
@@ -43,6 +71,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab, onO
       setReadiness(rData);
       setFunnel(fData);
       setApplications(aData);
+      loadAutopilotWidget();
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
@@ -249,6 +278,63 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigateTab, onO
               <ChevronRight className="w-3 h-3" />
             </button>
           </div>
+        </div>
+      </div>
+
+            {/* ⚡ 24/7 AUTONOMOUS AUTO-PILOT LIVE HUD WIDGET */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-cyan-950/30 to-slate-900 border border-cyan-500/30 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center shrink-0">
+            <Zap className="w-5 h-5 text-cyan-400 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold text-white">24/7 Zero-Touch Auto-Pilot Engine</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                autopilotStatus?.is_active ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              }`}>
+                {autopilotStatus?.is_active ? `🟢 ${autopilotStatus?.mode || 'FULL_AUTONOMOUS'}` : '🟡 PAUSED'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Continuously scanning 100+ live tech feeds, auto-tailoring STAR resumes & dispatching recruiter applications.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="hidden sm:flex items-center gap-4 text-xs font-mono pr-2 border-r border-slate-800">
+            <div>
+              <span className="text-[10px] text-slate-500 uppercase block">Scanned</span>
+              <span className="font-bold text-white">{autopilotStatus?.stats?.total_jobs_scanned || 70}+</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-500 uppercase block">Auto-Applied</span>
+              <span className="font-bold text-emerald-400">{autopilotStatus?.stats?.auto_applied_count || 0}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-500 uppercase block">Invites</span>
+              <span className="font-bold text-cyan-400">{autopilotStatus?.stats?.interviews_secured || 0}</span>
+            </div>
+          </div>
+
+          <button
+            disabled={pulsingCycle}
+            onClick={handlePulseNow}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+            title="Force immediate radar scan & application dispatch cycle"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${pulsingCycle ? 'animate-spin' : ''}`} />
+            <span>{pulsingCycle ? 'Executing Cycle...' : (pulseSuccess || 'Pulse Cycle Now')}</span>
+          </button>
+
+          <button
+            onClick={() => onNavigateTab('career-agent')}
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            title="Open Auto-Pilot Command Center"
+          >
+            <ArrowUpRight className="w-4 h-4 text-cyan-400" />
+          </button>
         </div>
       </div>
 

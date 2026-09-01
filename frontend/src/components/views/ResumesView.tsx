@@ -3,6 +3,7 @@ import { FileText, Sparkles, CheckCircle2, AlertTriangle, ArrowRight, ShieldChec
 import { api } from '../../lib/api';
 import { Resume } from '../../types';
 import { ResumeDocumentView } from './ResumeDocumentView';
+import { ResumeFactoryModal } from '../resumes/ResumeFactoryModal';
 import { AgentFleetHUD } from '../agent/AgentFleetHUD';
 import { useAuth } from '../../context/AuthContext';
 
@@ -15,6 +16,7 @@ export const ResumesView: React.FC = () => {
   const [simulating, setSimulating] = useState(false);
   const [activeTab, setActiveTab] = useState<'document' | 'ats_audit'>('document');
   const [loading, setLoading] = useState(true);
+  const [showFactoryModal, setShowFactoryModal] = useState(false);
 
   useEffect(() => {
     loadResumes();
@@ -69,6 +71,14 @@ export const ResumesView: React.FC = () => {
             Recruiter-ready ATS parser-compliant formats with STAR quantitative bullet guarantees for <strong className="text-emerald-400">{user?.full_name || 'Alexander'}</strong> ({user?.target_role || 'Full Stack Engineer'}).
           </p>
         </div>
+
+        <button
+          onClick={() => setShowFactoryModal(true)}
+          className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center gap-1.5 cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>✨ Open AI ATS Resume Factory</span>
+        </button>
 
         {/* Tab Controls */}
         <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
@@ -196,6 +206,11 @@ export const ResumesView: React.FC = () => {
           )}
         </div>
       )}
+
+      <ResumeFactoryModal
+        isOpen={showFactoryModal}
+        onClose={() => setShowFactoryModal(false)}
+      />
     </div>
   );
 };

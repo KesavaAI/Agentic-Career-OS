@@ -71,18 +71,23 @@ def tailor_resume(req: ResumeTailorRequest, db: Session = Depends(get_db)):
     user_prof = profile.__dict__ if profile else {}
     tailored = resume_tailor.tailor_resume(res.content_markdown, job.__dict__, user_prof)
     
-    # Save a version record
+    # Save a version record in PostgreSQL
+    v_tag = f"Tailored for {job.company_name} - {job.role}"
     rv = ResumeVersion(
         resume_id=res.id,
         job_id=job.id,
         target_company=job.company_name,
-        version_tag=f"Tailored for {job.company_name} - {job.role}",
+        version_tag=v_tag,
         diff_summary=", ".join(tailored["changes_summary"]),
         content_markdown=tailored["tailored_markdown"],
-        ats_score=min(res.ats_score + tailored["predicted_ats_boost"], 98)
+        ats_score=tailored.get("ats_score", 94)
     )
     db.add(rv)
     db.commit()
+    db.refresh(rv)
+
+    tailored["version_id"] = rv.id
+    tailored["version_tag"] = rv.version_tag
     
     audit_service.log(db, "kesava@career.local", "RESUME_TAILOR", "Resume", res.id, None, f"Tailored for {job.company_name}")
     return tailored

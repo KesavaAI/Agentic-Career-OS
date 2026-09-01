@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Job } from '../../types';
 import { JobMatchModal } from '../matching/JobMatchModal';
 import { JobAlertsModal } from '../alerts/JobAlertsModal';
+import { ResumeFactoryModal } from '../resumes/ResumeFactoryModal';
 
 interface DiscoveryViewProps {
   onOpenPrepare: (jobId: number) => void;
@@ -43,6 +44,7 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
   const [selectedScenarioJob, setSelectedScenarioJob] = useState<{ company: string; role: string; jobId?: number } | null>(null);
   const [matchingJob, setMatchingJob] = useState<Job | null>(null);
   const [showAlertsModal, setShowAlertsModal] = useState<boolean>(false);
+  const [factoryJob, setFactoryJob] = useState<Job | null>(null);
   const [scenarioPack, setScenarioPack] = useState<any[]>([]);
   const [loadingScenarioPack, setLoadingScenarioPack] = useState(false);
   const [scenarioSearch, setScenarioSearch] = useState('');
@@ -560,6 +562,15 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
 
                 <div className="flex items-center gap-1.5">
                   <button
+                    onClick={() => setFactoryJob(job)}
+                    className="px-2.5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-emerald-500/30"
+                    title="Generate Job-Specific ATS Resume"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>ATS Resume</span>
+                  </button>
+
+                  <button
                     onClick={() => handleTrackInPipeline(job)}
                     className="px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-blue-500/30"
                     title="Track in persistent Application CRM"
@@ -589,6 +600,17 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
             </div>
           ))}
         </div>
+      )}
+
+      {/* AI ATS Resume Factory Modal */}
+      {factoryJob && (
+        <ResumeFactoryModal
+          isOpen={!!factoryJob}
+          onClose={() => setFactoryJob(null)}
+          targetJobId={factoryJob.id}
+          targetJobRole={factoryJob.role}
+          targetCompany={factoryJob.company_name}
+        />
       )}
 
       {/* Job Alerts Modal */}

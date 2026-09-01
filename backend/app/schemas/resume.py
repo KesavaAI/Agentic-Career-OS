@@ -74,3 +74,12 @@ class ResumeTailorResponse(BaseModel):
     structured_resume: Optional[Dict[str, Any]] = None
     changes_summary: List[str]
     predicted_ats_boost: int
+    ats_score: Optional[int] = 92
+    matched_keywords: Optional[List[str]] = None
+    missing_keywords: Optional[List[str]] = None
+    truthfulness_warnings: Optional[List[str]] = None
+    truthfulness_checks: Optional[List[str]] = None
+    version_tag: Optional[str] = "v1.0"
+    version_id: Optional[int] = None
+    target_company: Optional[str] = "Target Company"
+    target_role: Optional[str] = "Target Role"

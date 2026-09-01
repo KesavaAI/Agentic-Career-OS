@@ -1,7 +1,7 @@
 import { CareerSwitcherBar } from '../layout/CareerSwitcherBar';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Compass, Filter, Search, Plus, Sparkles, Building2, MapPin, DollarSign,
+  Compass, Filter, Search, Plus, Sparkles, Building2, MapPin, DollarSign, Send,
   Calendar, ArrowUpRight, RefreshCw, Flame, BookOpen, Check, Copy, ExternalLink,
   HelpCircle, X, CheckCircle2, Zap, SlidersHorizontal, ChevronDown, Award,
   Clock, ShieldCheck, AlertCircle, ArrowUpDown, Tag, Bell
@@ -108,6 +108,25 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
       await loadPersonalizedFeed();
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleTrackInPipeline = async (job: Job) => {
+    try {
+      await api.createApplication({
+        job_id: job.id,
+        company_name: job.company_name,
+        role_title: job.role,
+        tier: job.tier || 'A',
+        match_score: job.match_score || 85,
+        status: 'SAVED',
+        source: job.source || 'Direct ATS',
+        notes: `Saved from Job Discovery Feed. Work mode: ${job.work_mode || 'Remote'}.`
+      });
+      setToastMsg(`✓ Tracked '${job.role}' at ${job.company_name} in Application CRM!`);
+      setTimeout(() => setToastMsg(null), 4000);
+    } catch (err: any) {
+      alert('Failed to track application: ' + err.message);
     }
   };
 
@@ -540,6 +559,15 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
                 </button>
 
                 <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleTrackInPipeline(job)}
+                    className="px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-blue-500/30"
+                    title="Track in persistent Application CRM"
+                  >
+                    <Send className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Track CRM</span>
+                  </button>
+
                   <button
                     onClick={() => handleOpenScenarioDossier(job.company_name, job.role, job.id)}
                     className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-slate-700"

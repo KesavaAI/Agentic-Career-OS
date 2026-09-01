@@ -299,6 +299,7 @@ export const api = {
   getApplicationEvents: (id: number) => fetchApi<any[]>(`/applications/${id}/events`),
   getApplicationEvidence: (id: number) => fetchApi<any[]>(`/applications/${id}/evidence`),
   addApplicationEvidence: (id: number, data: any) => fetchApi<any>(`/applications/${id}/evidence`, { method: 'POST', body: JSON.stringify(data) }),
+  getApplicationAnalyticsSummary: () => fetchApi<any>('/applications/analytics/summary'),
 
   // Companies & Recruiters
   getCompanies: () => fetchApi<any[]>('/companies'),

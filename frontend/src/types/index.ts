@@ -53,6 +53,12 @@ export interface Application {
   next_action?: string;
   follow_up_date?: string;
   is_user_approved: boolean;
+  source?: string;
+  cover_letter_text?: string;
+  cover_letter_version?: string;
+  recruiter_name?: string;
+  recruiter_email?: string;
+  recruiter_notes?: string;
   notes?: string;
   is_demo: boolean;
   created_at: string;

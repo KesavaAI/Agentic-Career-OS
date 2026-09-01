@@ -16,6 +16,12 @@ class ApplicationBase(BaseModel):
     follow_up_date: Optional[datetime] = None
     is_user_approved: Optional[bool] = False
     application_reference_id: Optional[str] = None
+    source: Optional[str] = "Direct ATS"
+    cover_letter_text: Optional[str] = None
+    cover_letter_version: Optional[str] = None
+    recruiter_name: Optional[str] = None
+    recruiter_email: Optional[str] = None
+    recruiter_notes: Optional[str] = None
     notes: Optional[str] = None
     is_demo: Optional[bool] = False
 
@@ -31,6 +37,12 @@ class ApplicationUpdate(BaseModel):
     follow_up_date: Optional[datetime] = None
     is_user_approved: Optional[bool] = None
     application_reference_id: Optional[str] = None
+    source: Optional[str] = None
+    cover_letter_text: Optional[str] = None
+    cover_letter_version: Optional[str] = None
+    recruiter_name: Optional[str] = None
+    recruiter_email: Optional[str] = None
+    recruiter_notes: Optional[str] = None
     notes: Optional[str] = None
 
 class ApplicationOut(ApplicationBase):

@@ -168,3 +168,109 @@ def clear_all_applications(db: Session = Depends(get_db)):
     count = db.query(Application).delete()
     db.commit()
     return {"success": True, "message": f"Cleared {count} applications from pipeline"}
+
+@router.get("/analytics/summary")
+def get_application_analytics_summary(db: Session = Depends(get_db)):
+    apps = db.query(Application).all()
+    total_apps = len(apps)
+
+    if total_apps == 0:
+        return {
+            "total_applications": 0,
+            "active_applications": 0,
+            "applied_count": 0,
+            "response_rate": 0.0,
+            "interview_rate": 0.0,
+            "offer_rate": 0.0,
+            "rejection_rate": 0.0,
+            "stage_counts": {
+                "SAVED": 0, "PREPARING": 0, "APPLIED": 0, "ASSESSMENT": 0,
+                "RECRUITER_SCREEN": 0, "INTERVIEW": 0, "FINAL_ROUND": 0,
+                "OFFER": 0, "REJECTED": 0, "WITHDRAWN": 0
+            },
+            "conversion_rates": {
+                "applied_to_response": 0.0,
+                "response_to_interview": 0.0,
+                "interview_to_offer": 0.0
+            }
+        }
+
+    status_map = {
+        "SAVED": 0, "PREPARING": 0, "APPLIED": 0, "ASSESSMENT": 0,
+        "RECRUITER_SCREEN": 0, "INTERVIEW": 0, "FINAL_ROUND": 0,
+        "OFFER": 0, "REJECTED": 0, "WITHDRAWN": 0
+    }
+
+    applied_count = 0
+    responded_count = 0
+    interview_count = 0
+    offer_count = 0
+    rejection_count = 0
+    active_count = 0
+
+    for a in apps:
+        st_upper = (a.status or "").upper()
+        if "SAVE" in st_upper or "READY" in st_upper or "SHORTLIST" in st_upper:
+            status_map["SAVED"] += 1
+        elif "PREPAR" in st_upper:
+            status_map["PREPARING"] += 1
+        elif "APPLIED" in st_upper or "SUBMIT" in st_upper or "CONFIRM" in st_upper:
+            status_map["APPLIED"] += 1
+            applied_count += 1
+        elif "ASSESS" in st_upper or "OA" in st_upper:
+            status_map["ASSESSMENT"] += 1
+            applied_count += 1
+            responded_count += 1
+        elif "RECRUITER" in st_upper or "SCREEN" in st_upper:
+            status_map["RECRUITER_SCREEN"] += 1
+            applied_count += 1
+            responded_count += 1
+            interview_count += 1
+        elif "INTERVIEW" in st_upper or "TECH" in st_upper or "DESIGN" in st_upper:
+            status_map["INTERVIEW"] += 1
+            applied_count += 1
+            responded_count += 1
+            interview_count += 1
+        elif "FINAL" in st_upper or "MANAGERIAL" in st_upper or "HR" in st_upper:
+            status_map["FINAL_ROUND"] += 1
+            applied_count += 1
+            responded_count += 1
+            interview_count += 1
+        elif "OFFER" in st_upper:
+            status_map["OFFER"] += 1
+            applied_count += 1
+            responded_count += 1
+            interview_count += 1
+            offer_count += 1
+        elif "REJECT" in st_upper:
+            status_map["REJECTED"] += 1
+            rejection_count += 1
+        elif "WITHDRAW" in st_upper:
+            status_map["WITHDRAWN"] += 1
+        else:
+            status_map["SAVED"] += 1
+
+        if st_upper not in ["REJECTED", "WITHDRAWN"]:
+            active_count += 1
+
+    denom = max(applied_count, 1) if applied_count > 0 else max(total_apps, 1)
+    response_rate = round((responded_count / denom) * 100, 1)
+    interview_rate = round((interview_count / denom) * 100, 1)
+    offer_rate = round((offer_count / denom) * 100, 1)
+    rejection_rate = round((rejection_count / max(total_apps, 1)) * 100, 1)
+
+    return {
+        "total_applications": total_apps,
+        "active_applications": active_count,
+        "applied_count": applied_count,
+        "response_rate": response_rate,
+        "interview_rate": interview_rate,
+        "offer_rate": offer_rate,
+        "rejection_rate": rejection_rate,
+        "stage_counts": status_map,
+        "conversion_rates": {
+            "applied_to_response": response_rate,
+            "response_to_interview": round((interview_count / max(responded_count, 1)) * 100, 1) if responded_count else 0.0,
+            "interview_to_offer": round((offer_count / max(interview_count, 1)) * 100, 1) if interview_count else 0.0
+        }
+    }

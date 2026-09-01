@@ -277,6 +277,18 @@ export const api = {
   recalculateMatches: () => fetchApi<any>('/jobs/recalculate-matches', { method: 'POST' }),
   getPersonalizedFeed: (params?: string) => fetchApi<any>(`/discovery/feed${params ? `?${params}` : ''}`),
 
+  // Job Alerts & Continuous Monitoring
+  getJobAlerts: () => fetchApi<any[]>('/alerts'),
+  getJobAlert: (id: number) => fetchApi<any>(`/alerts/${id}`),
+  createJobAlert: (data: any) => fetchApi<any>('/alerts', { method: 'POST', body: JSON.stringify(data) }),
+  updateJobAlert: (id: number, data: any) => fetchApi<any>(`/alerts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteJobAlert: (id: number) => fetchApi<any>(`/alerts/${id}`, { method: 'DELETE' }),
+  scanJobAlert: (id: number, forceCrawl: boolean = false) =>
+    fetchApi<any>(`/alerts/${id}/scan`, { method: 'POST', body: JSON.stringify({ force_crawl: forceCrawl }) }),
+  monitorAllJobAlerts: (forceCrawl: boolean = false) =>
+    fetchApi<any>('/alerts/monitor-all', { method: 'POST', body: JSON.stringify({ force_crawl: forceCrawl }) }),
+  getAlertNotifications: (id: number) => fetchApi<any>(`/alerts/${id}/notifications`),
+
   // Applications
   getApplications: () => fetchApi<any[]>('/applications'),
   getApplication: (id: number) => fetchApi<any>(`/applications/${id}`),

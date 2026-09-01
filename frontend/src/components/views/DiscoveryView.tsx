@@ -4,12 +4,13 @@ import {
   Compass, Filter, Search, Plus, Sparkles, Building2, MapPin, DollarSign,
   Calendar, ArrowUpRight, RefreshCw, Flame, BookOpen, Check, Copy, ExternalLink,
   HelpCircle, X, CheckCircle2, Zap, SlidersHorizontal, ChevronDown, Award,
-  Clock, ShieldCheck, AlertCircle, ArrowUpDown, Tag
+  Clock, ShieldCheck, AlertCircle, ArrowUpDown, Tag, Bell
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { Job } from '../../types';
 import { JobMatchModal } from '../matching/JobMatchModal';
+import { JobAlertsModal } from '../alerts/JobAlertsModal';
 
 interface DiscoveryViewProps {
   onOpenPrepare: (jobId: number) => void;
@@ -41,6 +42,7 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
   // Modals
   const [selectedScenarioJob, setSelectedScenarioJob] = useState<{ company: string; role: string; jobId?: number } | null>(null);
   const [matchingJob, setMatchingJob] = useState<Job | null>(null);
+  const [showAlertsModal, setShowAlertsModal] = useState<boolean>(false);
   const [scenarioPack, setScenarioPack] = useState<any[]>([]);
   const [loadingScenarioPack, setLoadingScenarioPack] = useState(false);
   const [scenarioSearch, setScenarioSearch] = useState('');
@@ -200,6 +202,15 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
             <span>{syncing ? 'Crawling Market...' : "⚡ Crawl & Sync Today's Fresh Jobs"}</span>
+          </button>
+
+          <button
+            onClick={() => setShowAlertsModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs rounded-lg shadow-md shadow-cyan-950/40 transition-all cursor-pointer"
+            title="Configure saved search preferences & continuous job alerts"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>🔔 Job Alerts</span>
           </button>
 
           <button
@@ -551,6 +562,13 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
           ))}
         </div>
       )}
+
+      {/* Job Alerts Modal */}
+      <JobAlertsModal
+        isOpen={showAlertsModal}
+        onClose={() => setShowAlertsModal(false)}
+        defaultCareer={careerContext?.primary_career || user?.target_role || 'AI Engineer'}
+      />
 
       {/* 8-Pillar Job Match Modal */}
       <JobMatchModal

@@ -12,7 +12,7 @@ from app.routers import (
     resumes, projects, interviews, mock_interview, learning,
     market, analytics, followups, offers, notifications,
     career_agent, backup_export, audit, settings as settings_router,
-    email_sync, discovery
+    email_sync, discovery, alerts
 )
 
 # Create all database tables
@@ -72,6 +72,7 @@ app.include_router(email_sync.router, prefix=settings.API_V1_STR)
 app.include_router(discovery.router, prefix=settings.API_V1_STR)
 app.include_router(taxonomy.router, prefix=settings.API_V1_STR)
 app.include_router(taxonomy.career_intel_router, prefix=settings.API_V1_STR)
+app.include_router(alerts.router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 def on_startup():

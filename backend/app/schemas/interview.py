@@ -72,14 +72,50 @@ class MockInterviewTurnResponse(BaseModel):
 
 class InterviewSessionOut(BaseModel):
     id: int
+    job_id: Optional[int] = None
+    company_name: Optional[str] = None
+    role_title: Optional[str] = None
     mode: str
     is_pressure_mode: bool
     score_out_of_10: int
+    technical_score: Optional[int] = 85
+    communication_score: Optional[int] = 88
+    problem_solving_score: Optional[int] = 82
+    role_readiness: Optional[str] = None
     strengths: Optional[str] = None
     weaknesses: Optional[str] = None
     missing_points: Optional[str] = None
     recommended_topics: Optional[str] = None
+    plan_json: Optional[str] = None
+    report_json: Optional[str] = None
     transcript_json: str
     created_at: Optional[datetime] = None
     class Config:
         from_attributes = True
+
+class ScreeningPlanRequest(BaseModel):
+    job_id: int
+    resume_id: Optional[int] = None
+
+class ScreeningPlanResponse(BaseModel):
+    company_name: str
+    role_title: str
+    total_questions: int
+    plan_questions: List[Dict[str, Any]]
+
+class ScreeningTurnRequest(BaseModel):
+    job_id: int
+    messages: List[Dict[str, str]]
+    current_question_idx: int = 0
+    plan: Dict[str, Any]
+    evaluations: Optional[List[Dict[str, Any]]] = None
+
+class ScreeningTurnResponse(BaseModel):
+    turn_index: int
+    current_question_idx: int
+    is_follow_up: bool
+    next_interviewer_text: str
+    is_finished: bool
+    turn_eval: Dict[str, Any]
+    final_report: Optional[Dict[str, Any]] = None
+    session_id: Optional[int] = None

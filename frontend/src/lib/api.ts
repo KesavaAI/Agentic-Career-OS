@@ -448,5 +448,11 @@ export const api = {
 
   // 📱 Autonomous Mobile Notification Gateway
   sendTestMobileAlert: (data: { title: string; message: string; priority?: string; webhook_url?: string }) =>
-    fetchApi<any>('/notifications/mobile/test-alert', { method: 'POST', body: JSON.stringify(data) })
+    fetchApi<any>('/notifications/mobile/test-alert', { method: 'POST', body: JSON.stringify(data) }),
+
+  // 🎙️ Prompt 8: AI Candidate Screening & Adaptive Interview
+  generateScreeningPlan: (data: { job_id: number; resume_id?: number }) =>
+    fetchApi<any>('/mock-interview/plan', { method: 'POST', body: JSON.stringify(data) }),
+  processScreeningTurn: (data: { job_id: number; messages: any[]; current_question_idx: number; plan: any; evaluations?: any[] }) =>
+    fetchApi<any>('/mock-interview/screening-turn', { method: 'POST', body: JSON.stringify(data) })
 };

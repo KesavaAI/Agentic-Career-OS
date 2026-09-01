@@ -5,6 +5,7 @@ import {
   Plus, Building, Briefcase, ExternalLink, RefreshCw
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { AdaptiveInterviewModal } from '../interviews/AdaptiveInterviewModal';
 import { Interview, Application } from '../../types';
 
 interface InterviewCenterViewProps {
@@ -17,6 +18,7 @@ export const InterviewCenterView: React.FC<InterviewCenterViewProps> = ({ onNavi
   const [applications, setApplications] = useState<Application[]>([]);
   const [selectedPack, setSelectedPack] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showScreeningModal, setShowScreeningModal] = useState(false);
 
   // Executive Company Dossier State
   const [dossierData, setDossierData] = useState<any | null>(null);
@@ -758,6 +760,10 @@ METRIC DEFENSE: ${q.metric_defense}`)}
           </div>
         </div>
       )}
+      <AdaptiveInterviewModal
+        isOpen={showScreeningModal}
+        onClose={() => setShowScreeningModal(false)}
+      />
     </div>
   );
 };

@@ -4,7 +4,7 @@ import {
   Compass, Filter, Search, Plus, Sparkles, Building2, MapPin, DollarSign, Send,
   Calendar, ArrowUpRight, RefreshCw, Flame, BookOpen, Check, Copy, ExternalLink,
   HelpCircle, X, CheckCircle2, Zap, SlidersHorizontal, ChevronDown, Award,
-  Clock, ShieldCheck, AlertCircle, ArrowUpDown, Tag, Bell
+  Clock, ShieldCheck, AlertCircle, ArrowUpDown, Tag, Bell, Mic
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +12,7 @@ import { Job } from '../../types';
 import { JobMatchModal } from '../matching/JobMatchModal';
 import { JobAlertsModal } from '../alerts/JobAlertsModal';
 import { ResumeFactoryModal } from '../resumes/ResumeFactoryModal';
+import { AdaptiveInterviewModal } from '../interviews/AdaptiveInterviewModal';
 
 interface DiscoveryViewProps {
   onOpenPrepare: (jobId: number) => void;
@@ -45,6 +46,7 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
   const [matchingJob, setMatchingJob] = useState<Job | null>(null);
   const [showAlertsModal, setShowAlertsModal] = useState<boolean>(false);
   const [factoryJob, setFactoryJob] = useState<Job | null>(null);
+  const [screeningJob, setScreeningJob] = useState<Job | null>(null);
   const [scenarioPack, setScenarioPack] = useState<any[]>([]);
   const [loadingScenarioPack, setLoadingScenarioPack] = useState(false);
   const [scenarioSearch, setScenarioSearch] = useState('');
@@ -562,6 +564,15 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
 
                 <div className="flex items-center gap-1.5">
                   <button
+                    onClick={() => setScreeningJob(job)}
+                    className="px-2.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-indigo-500/30"
+                    title="Start AI Technical Screening Session"
+                  >
+                    <Mic className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>AI Screening</span>
+                  </button>
+
+                  <button
                     onClick={() => setFactoryJob(job)}
                     className="px-2.5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-emerald-500/30"
                     title="Generate Job-Specific ATS Resume"
@@ -610,6 +621,17 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({ onOpenPrepare, onO
           targetJobId={factoryJob.id}
           targetJobRole={factoryJob.role}
           targetCompany={factoryJob.company_name}
+        />
+      )}
+
+      {/* AI Candidate Screening Modal */}
+      {screeningJob && (
+        <AdaptiveInterviewModal
+          isOpen={!!screeningJob}
+          onClose={() => setScreeningJob(null)}
+          targetJobId={screeningJob.id}
+          targetJobRole={screeningJob.role}
+          targetCompany={screeningJob.company_name}
         />
       )}
 

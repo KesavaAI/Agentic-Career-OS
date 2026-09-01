@@ -1,6 +1,6 @@
 # 🌐 AGENTIC CAREER OS — Complete Architecture & Implementation Guide
 
-> **Autonomous AI-Powered Career Intelligence, Universal Job Discovery, 8-Pillar Matching, and Truthful Application Platform**
+> **Autonomous AI-Powered Career Intelligence, Universal Job Discovery, 8-Pillar Matching, Truthful Application Platform, and Manifest V3 Chrome Extension**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
@@ -8,6 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5+-3178C6.svg)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-5.4+-646CFF.svg)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4+-38B2AC.svg)](https://tailwindcss.com/)
+[![Chrome Extension](https://img.shields.io/badge/Manifest_V3-Chrome_Extension-F4B400.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -26,11 +27,13 @@
    - [8. Multi-Offer & Counter-Offer Negotiation Playbook](#8-multi-offer--counter-offer-negotiation-playbook)
    - [9. Real-Time 5-Pillar Career Readiness Radar](#9-real-time-5-pillar-career-readiness-radar)
    - [10. Mock Interview Engine & STAR Verbal Defense Simulator](#10-mock-interview-engine--star-verbal-defense-simulator)
+   - [11. Chrome Job Extraction & Manifest V3 Browser Capture](#11-chrome-job-extraction--manifest-v3-browser-capture)
 4. [Relational Database Schema](#-relational-database-schema)
 5. [REST API Contract & Endpoints](#-rest-api-contract--endpoints)
-6. [Frontend User Interface & Components](#-frontend-user-interface--components)
-7. [Installation & Getting Started](#-installation--getting-started)
-8. [Automated Testing & System Verification](#-automated-testing--system-verification)
+6. [Extension Architecture & Installation](#-extension-architecture--installation)
+7. [Frontend User Interface & Components](#-frontend-user-interface--components)
+8. [Installation & Getting Started](#-installation--getting-started)
+9. [Automated Testing & System Verification](#-automated-testing--system-verification)
 
 ---
 
@@ -38,7 +41,7 @@
 
 **Agentic Career OS** is a production-grade, full-stack autonomous career operating system designed to eliminate the manual overhead of job hunting, resume customization, recruiter outreach, interview preparation, and compensation negotiation.
 
-Unlike generic job boards or AI wrappers with static mock data, **Agentic Career OS** connects live database pipelines, real-time ATS job connectors (Greenhouse, Lever, Ashby, Himalayas), zero-fabrication ATS resume compilers, a 5-agent autonomous swarm, and real-time telemetry.
+Unlike generic job boards or AI wrappers with static mock data, **Agentic Career OS** connects live database pipelines, real-time ATS job connectors (Greenhouse, Lever, Ashby, Himalayas), a **Manifest V3 Chrome Extension** for direct browser capture, zero-fabrication ATS resume compilers, a 5-agent autonomous swarm, and real-time telemetry.
 
 ---
 
@@ -49,6 +52,7 @@ graph TD
     A[Universal Candidate Profile] --> B[Multi-Career Taxonomy Engine]
     B -->|22+ Tech Domains| C[Job Discovery & Connector Pipeline]
     C -->|Greenhouse / Lever / Ashby / Himalayas| D[SHA-256 Deduplication & Normalization]
+    CH[Chrome Extension Browser Capture] -->|JSON-LD & DOM Parsing| D
     D --> E[(Active Jobs Relational Database)]
     E & A --> F[8-Pillar Transparent Match Scoring]
     F -->|Ranked Feed| G[Personalized Opportunity Feed]
@@ -147,6 +151,13 @@ graph TD
 - **Resume Defense Pack**: Generates bullet-by-bullet defense strategies for candidate resume points.
 - **Backend Service**: `app/services/mock_interview_engine.py` & `app/services/resume_defense_engine.py`
 
+### 11. Chrome Job Extraction & Manifest V3 Browser Capture
+- **Manifest V3 Extension**: Standalone extension allowing logged-in candidates to capture job listings directly from their browser while viewing Greenhouse, Lever, Ashby, LinkedIn, or corporate career sites.
+- **Multi-Tier Extraction Engine**: Combines `schema.org/JobPosting` JSON-LD structured data, OpenGraph meta tags, and semantic HTML DOM heuristics with field confidence scoring.
+- **Zero Fabrication Guarantee**: Un-detected or missing attributes (salary, experience) default strictly to `null`.
+- **Backend Ingestion Endpoint**: `POST /api/v1/jobs/capture` normalizes title via 22+ domain taxonomy, deduplicates via SHA-256 hashes, computes 8-pillar match score, and stores records in PostgreSQL (`source = "Browser Capture"`).
+- **Extension Bundle**: Located under `extension/` (`manifest.json`, `content.js`, `popup.html`, `popup.js`, `popup.css`, `background.js`).
+
 ---
 
 ## 🗄️ Relational Database Schema
@@ -156,6 +167,7 @@ graph TD
 | `users` | Multi-tenant auth, hashed passwords (Argon2), roles, email verification tokens. |
 | `profiles` | Master career profile: personal info, skills JSON, experiences JSON, projects JSON, education JSON. |
 | `jobs` | Normalized jobs: company name, role title, tier, match score, salary bracket, required & preferred skills, SHA-256 hash. |
+| `job_matches` | 8-Pillar match score breakdown, matched skills, missing skills, recommendation rationale. |
 | `applications` | Kanban applications: job reference, company, role, stage status, match score, tailored resume version. |
 | `application_events` | Application lifecycle history audit trail (status transitions, timestamps). |
 | `application_evidences`| Proof artifacts: confirmation emails, OA links, recruiter notes. |
@@ -164,11 +176,13 @@ graph TD
 | `recruiters` | Verified hiring managers & recruiters with company mapping and contact info. |
 | `companies` | Company profiles with tier ratings, industry, headquarters, and tech stacks. |
 | `interviews` | Scheduled interview rounds, preparation packs, and feedback notes. |
+| `interview_sessions`| Multi-turn screening and mock interview session transcripts and pillar scores. |
 | `learning_topics` | Skill gap tracker with recall status (Red/Yellow/Green) and flashcard review notes. |
 | `offers` | Compensation offers: base, variable, ESOPs, joining bonus, counter-offer status. |
 | `notifications` | In-app real-time agent alerts, priority badges, and read status. |
 | `autopilot_settings` | Background daemon configuration (thresholds, cycle intervals, auto-apply switches). |
 | `autopilot_logs` | Real-time telemetry log stream generated by the 5-agent swarm. |
+| `audit_logs` | Security and action audit stream. |
 
 ---
 
@@ -186,12 +200,13 @@ graph TD
 - `GET /api/v1/taxonomy/role/{role_name}` — Get detailed role family intelligence
 - `POST /api/v1/taxonomy/switch-career` — Switch career target role and recalibrate feeds
 
-### Job Discovery & Matching
+### Job Discovery, Capture & Matching
 - `GET /api/v1/jobs` — Query filtered, deduplicated, and ranked job feed
 - `GET /api/v1/jobs/{id}` — Get single job details with 8-pillar breakdown
 - `POST /api/v1/jobs/ingest` — Ingest raw job description from text or URL
+- `POST /api/v1/jobs/capture` — Ingest browser-captured job listing from Chrome Extension
 - `POST /api/v1/jobs/batch-auto-apply` — 1-click batch application creation for Tier-A jobs
-- `POST /api/v1/discovery/run-auto-scan` — Trigger multi-source crawler scan
+- `GET /api/v1/discovery/feed` — Universal personalized opportunity feed endpoint
 
 ### ATS Resumes & Optimization
 - `GET /api/v1/resumes` — List all versioned candidate resumes
@@ -208,16 +223,32 @@ graph TD
 - `POST /api/v1/followups/{id}/send-outreach` — Dispatch email via configured SMTP transport
 
 ### Autonomous Swarm & Control Room
-- `GET /api/v1/career-agent/autopilot/status` — Get live background worker state and stats
+- `GET /api/v1/career-agent/status` — Get live background worker state and stats
 - `POST /api/v1/career-agent/directive` — Submit natural language executive directive
 - `GET /api/v1/career-agent/swarm-dag` — Get real-time execution DAG for all 5 swarm agents
-- `POST /api/v1/career-agent/swarm-execute` — Trigger immediate multi-agent sweep
+- `POST /api/v1/career-agent/orchestrate-cycle` — Trigger immediate multi-agent sweep
 
 ### Executive Intelligence & Negotiation
 - `GET /api/v1/interviews/dossier/{company_name}` — Generate reverse-engineered architecture dossier
 - `POST /api/v1/offers/negotiate` — Generate 3-track compensation negotiation playbook
 - `GET /api/v1/analytics/readiness` — Calculate real-time 5-pillar career readiness score
 - `GET /api/v1/analytics/funnel` — Calculate live conversion funnel telemetry
+
+---
+
+## 🧩 Extension Architecture & Installation
+
+### Chrome Extension (`extension/`)
+- `manifest.json`: Manifest V3 extension configuration with host permissions for localhost and web URLs.
+- `content.js`: Content script extracting JSON-LD, Microdata, and DOM content with confidence scores.
+- `popup.html` / `popup.js` / `popup.css`: Extension UI with editable fields, confidence badges, and submit button.
+- `background.js`: Background service worker.
+
+### Installation Steps:
+1. Open Google Chrome and navigate to `chrome://extensions`.
+2. Enable **Developer mode** in the top-right toggle.
+3. Click **Load unpacked** and select the folder: `D:\Agentic Career OS\extension`.
+4. Open any job page (Greenhouse, Lever, Ashby, LinkedIn) and click the extension icon to add the job to Agentic Career OS!
 
 ---
 
@@ -281,7 +312,7 @@ cd Agentic-Career-OS
 cd backend
 python -m venv venv
 # On Windows:
-.\venv\Scripts\activate
+.env\Scriptsctivate
 # On Linux/macOS:
 source venv/bin/activate
 
@@ -304,32 +335,19 @@ npm run dev -- --port 3000
 
 The repository includes automated test suites covering all backend routers, database models, connectors, and interlinked workflows:
 
-### Run 10-Feature Exhaustive Audit:
+### Run Chrome Job Extraction Test Suite (Prompt 11):
 ```bash
-python scratch/full_system_deep_audit.py
+python scratch/test_prompt11_chrome_job_extraction.py
 ```
 ```
 ======================================================================
-AGENTIC CAREER OS: 100% EXHAUSTIVE SYSTEM AUDIT
-======================================================================
-[PASS] [DATABASE] Relational Schema & Seed Integrity -> All 14 tables verified.
-[PASS] [TAXONOMY] 22+ Domain Multi-Career Taxonomy -> Loaded 9 Domains.
-[PASS] [MATCHING] 8-Pillar Transparent Match Breakdown -> Overall: 89%, Role: 88%.
-[PASS] [RESUME_ENGINE] Truthful Dynamic ATS Synthesis -> Zero fabrication: True.
-[PASS] [ATS_SIMULATOR] Real-Time Job Description Audit -> ATS Score: 88%.
-[PASS] [SWARM_AGENT] 5-Agent Swarm Orchestrator & Directive State -> Swarm: ONLINE.
-[PASS] [HEADHUNTER] Recruiter CRM & 1-Click Pitch Dispatcher -> Verified targets: 2.
-[PASS] [DOSSIER_AGENT] Reverse-Engineered P99 Architecture Dossier -> Compiled Dossier: Razorpay.
-[PASS] [NEGOTIATOR] Autonomous Counter-Offer Playbook Agent -> Target CTC Rs. 29.9L.
-[PASS] [ANALYTICS] 5-Pillar Real-Time Readiness Radar -> Overall Readiness: 91/100.
-======================================================================
-AUDIT COMPLETE: 10 PASSED, 0 FAILED (100% HEALTH)
+PROMPT 11 CHROME JOB EXTRACTION TEST SUITE COMPLETED: 100% PASSED!
 ======================================================================
 ```
 
-### Run 9-Stage End-to-End Workflow Integration Test:
+### Run 10-Feature Exhaustive Audit:
 ```bash
-python scratch/test_pipeline_direct_functions.py
+python scratch/full_system_deep_audit.py
 ```
 
 ### Run TypeScript Compilation Check:

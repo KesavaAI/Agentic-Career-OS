@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, cast
 from datetime import datetime
 
 from app.database import get_db
@@ -52,7 +52,7 @@ def get_autopilot_status(
     current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user_id = current_user.id if current_user else None
+    user_id: Optional[int] = int(current_user.id) if (current_user and hasattr(current_user, 'id') and current_user.id is not None) else None
     setting = career_heartbeat_daemon.get_or_create_settings(db, user_id)
 
     # Compute aggregate autonomous metrics
@@ -64,31 +64,32 @@ def get_autopilot_status(
     ).count()
 
     recent_logs = db.query(AutopilotLog).order_by(AutopilotLog.created_at.desc()).limit(20).all()
-    logs_data = [
-        {
-            "id": l.id,
-            "event_type": l.event_type,
-            "company_name": l.company_name,
-            "role_title": l.role_title,
-            "match_score": l.match_score,
-            "message": l.message,
-            "status": l.status,
-            "created_at": l.created_at.strftime("%H:%M:%S") if l.created_at else ""
-        }
-        for l in recent_logs
-    ]
+    logs_data = []
+    for l in recent_logs:
+        log_created_at = getattr(l, "created_at", None)
+        logs_data.append({
+            "id": getattr(l, "id", 0),
+            "event_type": getattr(l, "event_type", ""),
+            "company_name": getattr(l, "company_name", None),
+            "role_title": getattr(l, "role_title", None),
+            "match_score": getattr(l, "match_score", None),
+            "message": getattr(l, "message", ""),
+            "status": getattr(l, "status", "SUCCESS"),
+            "created_at": log_created_at.strftime("%H:%M:%S") if isinstance(log_created_at, datetime) else ""
+        })
 
+    last_run = getattr(setting, "last_run_at", None)
     return {
         "success": True,
-        "is_active": setting.is_active,
-        "mode": setting.mode,
-        "min_match_threshold": setting.min_match_threshold,
-        "daily_max_applications": setting.daily_max_applications,
-        "min_salary_lpa": setting.min_salary_lpa,
-        "auto_followup_enabled": setting.auto_followup_enabled,
-        "auto_inbox_sync_enabled": setting.auto_inbox_sync_enabled,
-        "cycle_interval_minutes": setting.cycle_interval_minutes,
-        "last_run_at": setting.last_run_at.isoformat() if setting.last_run_at else None,
+        "is_active": bool(getattr(setting, "is_active", False)),
+        "mode": str(getattr(setting, "mode", "FULL_AUTONOMOUS")),
+        "min_match_threshold": int(getattr(setting, "min_match_threshold", 75)),
+        "daily_max_applications": int(getattr(setting, "daily_max_applications", 10)),
+        "min_salary_lpa": float(getattr(setting, "min_salary_lpa", 18.0)),
+        "auto_followup_enabled": bool(getattr(setting, "auto_followup_enabled", True)),
+        "auto_inbox_sync_enabled": bool(getattr(setting, "auto_inbox_sync_enabled", True)),
+        "cycle_interval_minutes": int(getattr(setting, "cycle_interval_minutes", 30)),
+        "last_run_at": last_run.isoformat() if isinstance(last_run, datetime) else None,
         "stats": {
             "total_jobs_scanned": total_scanned,
             "auto_applied_count": auto_applied,
@@ -105,7 +106,7 @@ def toggle_autopilot(
     current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user_id = current_user.id if current_user else None
+    user_id: Optional[int] = int(current_user.id) if (current_user and hasattr(current_user, 'id') and current_user.id is not None) else None
     setting = career_heartbeat_daemon.get_or_create_settings(db, user_id)
 
     if req.is_active is not None:
@@ -136,7 +137,7 @@ def update_autopilot_settings(
     current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user_id = current_user.id if current_user else None
+    user_id: Optional[int] = int(current_user.id) if (current_user and hasattr(current_user, 'id') and current_user.id is not None) else None
     setting = career_heartbeat_daemon.get_or_create_settings(db, user_id)
 
     if req.min_match_threshold is not None:
@@ -164,19 +165,20 @@ def get_autopilot_logs(
     db: Session = Depends(get_db)
 ):
     logs = db.query(AutopilotLog).order_by(AutopilotLog.created_at.desc()).limit(limit).all()
-    return [
-        {
-            "id": l.id,
-            "event_type": l.event_type,
-            "company_name": l.company_name,
-            "role_title": l.role_title,
-            "match_score": l.match_score,
-            "message": l.message,
-            "status": l.status,
-            "created_at": l.created_at.strftime("%H:%M:%S") if l.created_at else ""
-        }
-        for l in logs
-    ]
+    logs_data = []
+    for l in logs:
+        log_created_at = getattr(l, "created_at", None)
+        logs_data.append({
+            "id": getattr(l, "id", 0),
+            "event_type": getattr(l, "event_type", ""),
+            "company_name": getattr(l, "company_name", None),
+            "role_title": getattr(l, "role_title", None),
+            "match_score": getattr(l, "match_score", None),
+            "message": getattr(l, "message", ""),
+            "status": getattr(l, "status", "SUCCESS"),
+            "created_at": log_created_at.strftime("%H:%M:%S") if isinstance(log_created_at, datetime) else ""
+        })
+    return logs_data
 
 @router.post("/autopilot/trigger-now")
 def trigger_autopilot_cycle_now(
@@ -202,7 +204,7 @@ def run_career_agent_pipeline(req: AgentRunRequest, db: Session = Depends(get_db
     profile = db.query(Profile).first()
     p_dict = profile.__dict__ if profile else {}
     resume = db.query(Resume).first()
-    res_md = resume.content_markdown if resume else "Kesava - GenAI Engineer"
+    res_md = str(resume.content_markdown) if (resume and getattr(resume, "content_markdown", None)) else "Kesava - GenAI Engineer"
     
     state = career_workflow.run_job_pipeline(req.raw_jd_text, p_dict, res_md)
     return state
@@ -242,7 +244,7 @@ def submit_agent_directive(
 ):
     """Submits a natural language executive directive to the multi-agent swarm."""
     from app.services.agent_swarm_orchestrator import agent_swarm_orchestrator
-    user_id = current_user.id if current_user else None
+    user_id: Optional[int] = int(current_user.id) if (current_user and hasattr(current_user, 'id') and current_user.id is not None) else None
     return agent_swarm_orchestrator.process_natural_language_directive(req.directive, db, user_id)
 
 @router.get("/swarm-dag")
@@ -257,31 +259,3 @@ def execute_swarm_cycle(db: Session = Depends(get_db)):
     """Triggers an immediate parallel multi-agent swarm sweep across SCOUT, MATCHER, TAILOR, SENTRY, PREPARE."""
     from app.services.career_agent_orchestrator import career_agent_orchestrator
     return career_agent_orchestrator.execute_autonomous_cycle(db)
-
-@router.get("/control-room")
-def get_control_room_state(db: Session = Depends(get_db)):
-    """Returns real control room state showing IDLE, RUNNING, COMPLETED, WAITING_FOR_USER, FAILED for all agent nodes."""
-    from app.services.career_agent_orchestrator import career_agent_orchestrator
-    return career_agent_orchestrator.get_real_control_room_state(db)
-
-class Prompt9SettingsRequest(BaseModel):
-    min_match_threshold: Optional[int] = 75
-    require_user_approval: Optional[bool] = True
-    auto_tailor_resume: Optional[bool] = True
-    auto_prepare_screening: Optional[bool] = True
-    location_preference: Optional[str] = "India / Remote"
-    remote_only: Optional[bool] = True
-
-@router.post("/update-settings")
-def update_career_agent_settings(req: Prompt9SettingsRequest, db: Session = Depends(get_db)):
-    setting = db.query(AutopilotSetting).first()
-    if not setting:
-        setting = AutopilotSetting()
-        db.add(setting)
-
-    for k, v in req.dict(exclude_unset=True).items():
-        setattr(setting, k, v)
-
-    db.commit()
-    db.refresh(setting)
-    return {"status": "success", "message": "Updated autonomous career agent settings", "settings": setting}

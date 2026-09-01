@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from datetime import datetime
 
 class JobBase(BaseModel):
@@ -114,3 +114,24 @@ class JobIngestRequest(BaseModel):
     url: Optional[str] = None
     raw_text: Optional[str] = None
     source: Optional[str] = "Manual Paste"
+
+
+class JobCaptureRequest(BaseModel):
+    role: str
+    company_name: Optional[str] = None
+    description: str
+    job_url: str
+    source_domain: Optional[str] = None
+    location: Optional[str] = None
+    work_mode: Optional[str] = None
+    employment_type: Optional[str] = None
+    min_salary: Optional[float] = None
+    max_salary: Optional[float] = None
+    experience_min: Optional[float] = None
+    experience_max: Optional[float] = None
+    required_skills: Optional[str] = None
+    preferred_skills: Optional[str] = None
+    posted_date: Optional[datetime] = None
+    confidence_scores: Optional[Dict[str, float]] = None
+
+JobCaptureRequest.model_rebuild()

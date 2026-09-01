@@ -1,57 +1,60 @@
+from typing import Optional
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean, ForeignKey, Index
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 from app.database import Base
 
 class Job(Base):
     __tablename__ = "jobs"
     
-    id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
-    company_name = Column(String(255), nullable=False, index=True)
-    role = Column(String(255), nullable=False, index=True)
-    tier = Column(String(10), default="A") # A, B, C
-    priority_score = Column(Integer, default=85) # 0 - 100
-    match_score = Column(Integer, default=85) # 0 - 100
-    min_salary = Column(Float, nullable=True) # LPA
-    max_salary = Column(Float, nullable=True) # LPA
-    experience_min = Column(Float, default=1.0)
-    experience_max = Column(Float, default=4.0)
-    work_mode = Column(String(50), default="Remote / Hybrid") # Remote, Hybrid, Onsite
-    location = Column(String(255), default="Bengaluru", index=True)
-    employment_type = Column(String(50), default="Full-time") # Full-time, Contract, Internship
-    description = Column(Text, nullable=False)
-    responsibilities = Column(Text, nullable=True)
-    required_skills = Column(Text, nullable=True) # JSON or comma string
-    preferred_skills = Column(Text, nullable=True)
-    education = Column(String(255), default="B.Tech / B.E / M.Tech / Equivalent")
-    job_url = Column(String(500), nullable=True)
-    career_url = Column(String(500), nullable=True)
-    canonical_url = Column(String(500), nullable=True)
-    source = Column(String(100), default="Direct / LinkedIn", index=True)
-    source_job_id = Column(String(255), index=True, nullable=True)
-    description_hash = Column(String(64), index=True, nullable=True)
-    posted_date = Column(DateTime(timezone=True), nullable=True, index=True)
-    first_seen_at = Column(DateTime(timezone=True), server_default=func.now())
-    last_seen_at = Column(DateTime(timezone=True), server_default=func.now())
-    last_verified_at = Column(DateTime(timezone=True), server_default=func.now())
-    expired_at = Column(DateTime(timezone=True), nullable=True)
-    deadline = Column(DateTime(timezone=True), nullable=True)
-    status = Column(String(50), default="NOT REVIEWED") # NOT REVIEWED, SHORTLISTED, READY TO APPLY, APPLIED, INTERVIEW, OFFER, etc.
-    interview_stage = Column(String(50), nullable=True)
-    next_action = Column(String(255), default="Review JD & Tailor Resume")
-    follow_up_date = Column(DateTime(timezone=True), nullable=True)
-    recruiter_name = Column(String(255), nullable=True)
-    recruiter_email = Column(String(255), nullable=True)
-    resume_version_used = Column(String(100), default="GenAI_Agentic_v1")
-    notes = Column(Text, nullable=True)
-    freshness_badge = Column(String(50), default="🔥 Posted today") # 🔥 Posted today, 🟢 1-3 days, 🟡 4-7 days, 🟠 8-14 days, 🔴 15+ days
-    is_urgent = Column(Boolean, default=False)
-    is_easy_apply = Column(Boolean, default=False)
-    is_active = Column(Boolean, default=True, index=True)
-    is_demo = Column(Boolean, default=False)
-    is_archived = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    company_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
+    company_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    tier: Mapped[str] = mapped_column(String(10), default="A")
+    priority_score: Mapped[int] = mapped_column(Integer, default=85)
+    match_score: Mapped[int] = mapped_column(Integer, default=85)
+    min_salary: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    max_salary: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    experience_min: Mapped[float] = mapped_column(Float, default=1.0)
+    experience_max: Mapped[float] = mapped_column(Float, default=4.0)
+    work_mode: Mapped[str] = mapped_column(String(50), default="Remote / Hybrid")
+    location: Mapped[str] = mapped_column(String(255), default="Bengaluru", index=True)
+    employment_type: Mapped[str] = mapped_column(String(50), default="Full-time")
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    responsibilities: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    required_skills: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    preferred_skills: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    education: Mapped[str] = mapped_column(String(255), default="B.Tech / B.E / M.Tech / Equivalent")
+    job_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    career_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    canonical_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    source: Mapped[str] = mapped_column(String(100), default="Direct / LinkedIn", index=True)
+    source_job_id: Mapped[Optional[str]] = mapped_column(String(255), index=True, nullable=True)
+    description_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True, nullable=True)
+    posted_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expired_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    deadline: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="NOT REVIEWED")
+    interview_stage: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    next_action: Mapped[str] = mapped_column(String(255), default="Review JD & Tailor Resume")
+    follow_up_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    recruiter_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    recruiter_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    resume_version_used: Mapped[str] = mapped_column(String(100), default="GenAI_Agentic_v1")
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    freshness_badge: Mapped[str] = mapped_column(String(50), default="🔥 Posted today")
+    is_urgent: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_easy_apply: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
     __table_args__ = (
         Index("ix_jobs_source_job_id", "source", "source_job_id"),

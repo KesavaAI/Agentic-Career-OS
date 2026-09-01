@@ -470,3 +470,28 @@ export const api = {
     remote_only?: boolean;
   }) => fetchApi<any>('/career-agent/update-settings', { method: 'POST', body: JSON.stringify(data) })
 };
+
+
+export async function captureBrowserJob(payload: {
+  role: string;
+  company_name?: string;
+  description: string;
+  job_url: string;
+  location?: string;
+  work_mode?: string;
+  min_salary?: number;
+  max_salary?: number;
+  required_skills?: string;
+  confidence_scores?: Record<string, number>;
+}) {
+  const res = await fetch(`${API_BASE}/jobs/capture`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to capture browser job' }));
+    throw new Error(err.detail || 'Failed to capture browser job');
+  }
+  return res.json();
+}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Agentic Career OS</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="logo">⚡ Agentic Career OS</div>
+    <div class="badge">Chrome Extractor</div>
+  </div>
+
+  <div id="loading" class="status-box">
+    🔍 Extracting job data from page...
+  </div>
+
+  <div id="content" class="content-box" style="display: none;">
+    <div class="field-group">
+      <label>Job Title <span id="conf-title" class="conf-badge">High</span></label>
+      <input type="text" id="role" placeholder="e.g. AI Engineer">
+    </div>
+
+    <div class="field-group">
+      <label>Company <span id="conf-company" class="conf-badge">High</span></label>
+      <input type="text" id="company_name" placeholder="e.g. Observe.ai">
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label>Location</label>
+        <input type="text" id="location" placeholder="Bengaluru">
+      </div>
+      <div class="field-group">
+        <label>Work Mode</label>
+        <select id="work_mode">
+          <option value="Remote">Remote</option>
+          <option value="Hybrid">Hybrid</option>
+          <option value="Onsite">Onsite</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label>Min CTC (LPA)</label>
+        <input type="number" id="min_salary" placeholder="e.g. 18.0">
+      </div>
+      <div class="field-group">
+        <label>Max CTC (LPA)</label>
+        <input type="number" id="max_salary" placeholder="e.g. 28.0">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label>Extracted Required Skills</label>
+      <input type="text" id="required_skills" placeholder="Python, PyTorch, RAG">
+    </div>
+
+    <div class="field-group">
+      <label>Source URL</label>
+      <input type="text" id="job_url" readonly class="readonly-input">
+    </div>
+
+    <div class="actions">
+      <button id="submit-btn" class="btn-primary">➕ ADD TO CAREER OS</button>
+    </div>
+  </div>
+
+  <div id="result" class="result-box" style="display: none;"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

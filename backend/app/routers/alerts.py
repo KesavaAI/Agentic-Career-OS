@@ -57,6 +57,17 @@ def create_job_alert(
     db.refresh(alert)
     return alert
 
+@router.post("/monitor-all")
+def trigger_all_alerts_monitoring(
+    force_crawl: bool = Body(False, embed=True),
+    db: Session = Depends(get_db)
+):
+    """
+    Runs continuous background monitoring across all active saved search alerts.
+    """
+    res = job_alert_monitor.monitor_all_active_alerts(db=db, force_crawl=force_crawl)
+    return res
+
 @router.get("/{alert_id}", response_model=JobAlertOut)
 def get_job_alert(alert_id: int, db: Session = Depends(get_db)):
     alert = db.query(JobAlert).filter(JobAlert.id == alert_id).first()
@@ -110,17 +121,6 @@ def trigger_alert_scan(
         "message": f"Scanned alert '{alert.title}': Found {res['total_matched_jobs']} matching opportunities ({res['new_notifications_sent']} new notifications dispatched).",
         "result": res
     }
-
-@router.post("/monitor-all")
-def trigger_all_alerts_monitoring(
-    force_crawl: bool = Body(False, embed=True),
-    db: Session = Depends(get_db)
-):
-    """
-    Runs continuous background monitoring across all active saved search alerts.
-    """
-    res = job_alert_monitor.monitor_all_active_alerts(db=db, force_crawl=force_crawl)
-    return res
 
 @router.get("/{alert_id}/notifications")
 def get_alert_notification_history(alert_id: int, db: Session = Depends(get_db)):

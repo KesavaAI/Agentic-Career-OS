@@ -12,7 +12,7 @@ from app.models.profile import Profile
 from app.models.application import Application
 from app.models.user import User
 from app.dependencies import get_current_user
-from app.schemas.job import JobOut, JobCreate, JobUpdate, BulkJobAction, JobIngestRequest, PaginatedJobsOut
+from app.schemas.job import JobOut, JobCreate, JobUpdate, BulkJobAction, JobIngestRequest, PaginatedJobsOut, JobCaptureRequest
 from app.schemas.job_match import JobMatchOut, MatchAnalysisRequest, MatchAnalysisResponse
 from app.services.jd_extractor import jd_extractor
 from app.services.matcher import job_matcher
@@ -20,7 +20,7 @@ from app.services.matching_engine import ai_job_matcher
 from app.services.duplicate_detector import duplicate_detector
 from app.services.audit_service import audit_service
 from app.services.security_middleware import is_safe_url
-from app.services.role_intelligence_engine import role_intelligence_engine
+from app.services.career_taxonomy import career_taxonomy
 
 router = APIRouter(prefix="/jobs", tags=["Jobs & 8-Pillar Matching"])
 
@@ -238,6 +238,146 @@ def recalculate_all_job_matches(db: Session = Depends(get_db)):
         "success": True,
         "message": f"Successfully recomputed 8-pillar match scores for {updated_count} jobs!",
         "updated_jobs_count": updated_count
+    }
+
+
+@router.post("/capture", response_model=JobOut)
+def capture_browser_job(
+    req: JobCaptureRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """
+    Ingests, normalizes, deduplicates, and scores a job listing captured directly from the user's Chrome browser extension.
+    Preserves source provenance ('Browser Capture') and connects to 8-pillar matching and candidate CRM.
+    """
+    user_id = int(current_user.id) if (current_user and hasattr(current_user, 'id') and current_user.id is not None) else None
+    
+    # 1. Canonical Normalization using Role Intelligence Taxonomy
+    role_intel = career_taxonomy.get_role_intelligence(req.role)
+    primary_role = role_intel.get("canonical_role", req.role)
+    
+    # 2. SHA-256 Description Hash & Deduplication
+    desc_hash = f"hash_{len(req.description)}"
+    existing_jobs = [j.__dict__ for j in db.query(Job).filter(Job.is_archived == False).all()]
+    
+    candidate_job_dict = {
+        "company_name": req.company_name or "Unknown Company",
+        "role": primary_role,
+        "description": req.description,
+        "job_url": req.job_url,
+        "description_hash": desc_hash
+    }
+    
+    dup_res = duplicate_detector.check_duplicate(candidate_job_dict, existing_jobs)
+    if dup_res.get("is_duplicate"):
+        dup_id = dup_res.get("duplicate_id")
+        existing_job = db.query(Job).filter(Job.id == dup_id).first()
+        if existing_job:
+            # Update source URL if missing and return existing canonical job
+            if not existing_job.job_url:
+                existing_job.job_url = req.job_url
+                db.commit()
+            return existing_job
+
+    # 3. Create & Persist New Job Record
+    new_job = Job(
+        company_name=req.company_name or "Unknown Company",
+        role=primary_role,
+        tier="A",
+        description=req.description,
+        location=req.location or "Remote / Flexible",
+        work_mode=req.work_mode or "Remote",
+        employment_type=req.employment_type or "Full-time",
+        min_salary=req.min_salary,
+        max_salary=req.max_salary,
+        experience_min=req.experience_min or 1.0,
+        experience_max=req.experience_max or 4.0,
+        required_skills=req.required_skills,
+        preferred_skills=req.preferred_skills,
+        job_url=req.job_url,
+        canonical_url=req.job_url,
+        source="Browser Capture",
+        source_job_id=req.job_url,
+        description_hash=desc_hash,
+        posted_date=req.posted_date or datetime.utcnow(),
+        status="NOT REVIEWED",
+        next_action="Review JD & Tailor Resume",
+        is_active=True,
+        is_demo=False
+    )
+    
+    db.add(new_job)
+    db.commit()
+    db.refresh(new_job)
+
+    # 4. 8-Pillar Matching & Personalization
+    profile = db.query(Profile).filter(Profile.user_id == user_id).first() if user_id else db.query(Profile).first()
+    p_dict = profile.__dict__ if profile else {}
+    
+    match_data = ai_job_matcher.calculate_match(new_job.__dict__, p_dict)
+    new_job.tier = match_data.get("tier", "A")
+    new_job.priority_score = match_data.get("priority_score", 85)
+    new_job.match_score = match_data.get("overall_score", 85)
+
+    existing_jm = db.query(JobMatch).filter(JobMatch.job_id == new_job.id).first()
+    if not existing_jm:
+        jm = JobMatch(
+            job_id=new_job.id,
+            **{k: v for k, v in match_data.items() if k in JobMatch.__table__.columns.keys()}
+        )
+        db.add(jm)
+    else:
+        for k, v in match_data.items():
+            if k in JobMatch.__table__.columns.keys():
+                setattr(existing_jm, k, v)
+    db.commit()
+    db.refresh(new_job)
+
+    # Log Audit Event
+    user_email = current_user.email if (current_user and hasattr(current_user, 'email')) else "candidate@career.local"
+    audit_service.log(db, user_email, "CAPTURE", "Job", new_job.id, None, f"Captured browser job '{new_job.role}' at '{new_job.company_name}' via Chrome Extension")
+
+    return new_job
+
+
+@router.get("/opportunity-feed")
+def get_personalized_opportunity_feed(
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user)
+):
+    """
+    Returns personalized opportunity feed sorted by 8-pillar composite rank.
+    """
+    user_id = int(current_user.id) if (current_user and hasattr(current_user, 'id') and current_user.id is not None) else None
+    profile = db.query(Profile).filter(Profile.user_id == user_id).first() if user_id else db.query(Profile).first()
+    p_dict = profile.__dict__ if profile else {}
+
+    jobs = db.query(Job).filter(Job.is_archived == False, Job.is_active == True).order_by(Job.priority_score.desc(), Job.match_score.desc()).limit(limit).all()
+    feed_items = []
+    for j in jobs:
+        m = ai_job_matcher.calculate_match(j.__dict__, p_dict)
+        feed_items.append({
+            "id": j.id,
+            "company_name": j.company_name,
+            "role": j.role,
+            "tier": j.tier,
+            "match_score": m.get("overall_score", j.match_score),
+            "priority_score": j.priority_score,
+            "location": j.location,
+            "work_mode": j.work_mode,
+            "source": j.source,
+            "job_url": j.job_url,
+            "freshness_badge": j.freshness_badge,
+            "required_skills": j.required_skills,
+            "created_at": j.created_at.isoformat() if j.created_at else None
+        })
+
+    return {
+        "success": True,
+        "total": len(feed_items),
+        "feed": feed_items
     }
 
 @router.get("/{job_id}", response_model=JobOut)

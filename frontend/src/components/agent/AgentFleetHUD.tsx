@@ -24,8 +24,11 @@ export const AgentFleetHUD: React.FC<AgentFleetHUDProps> = ({ onDirectiveApplied
 
   const loadSwarmDAG = async () => {
     try {
-      const res = await api.getSwarmDagState();
-      setSwarmState(res);
+      const [dagRes, controlRes] = await Promise.all([
+        api.getSwarmDagState().catch(() => null),
+        api.getControlRoomState().catch(() => null)
+      ]);
+      setSwarmState(controlRes || dagRes);
     } catch (err) {
       console.error('Failed to load swarm state:', err);
     }
@@ -58,11 +61,11 @@ export const AgentFleetHUD: React.FC<AgentFleetHUDProps> = ({ onDirectiveApplied
     try {
       setPulsingSwarm(true);
       setPulseSuccess(null);
-      const res = await api.executeSwarmCycle();
-      setPulseSuccess(res.message || '✓ Full Swarm Sweep Complete!');
+      const res = await api.orchestrateCareerAgentCycle();
+      setPulseSuccess(`✓ Cycle Completed: Discovered ${res.jobs_discovered} jobs, Matched ${res.high_match_jobs} leads, Tailored ${res.resumes_tailored} resumes!`);
       await loadSwarmDAG();
       if (onDirectiveApplied) onDirectiveApplied();
-      setTimeout(() => setPulseSuccess(null), 5000);
+      setTimeout(() => setPulseSuccess(null), 6000);
     } catch (err: any) {
       alert('Swarm execution failed: ' + err.message);
     } finally {

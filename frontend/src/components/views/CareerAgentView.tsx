@@ -3,447 +3,277 @@ import {
   Bot, Sparkles, ShieldCheck, CheckCircle2, Play, Pause, RefreshCw, 
   Terminal, Sliders, Zap, CheckCircle, Clock, Send, Mail, Briefcase, 
   TrendingUp, Award, AlertTriangle, ChevronRight, Activity, Cpu, Layers,
-  ArrowRight, Shield, Check, Lock, Compass
+  ArrowRight, Shield, Check, Lock, Compass, Eye, Server, FileText
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { AgentFleetHUD } from '../agent/AgentFleetHUD';
 
 export const CareerAgentView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'swarm_dag' | 'autopilot' | 'copilot'>('swarm_dag');
-  const [autopilotData, setAutopilotData] = useState<any>(null);
-  const [swarmState, setSwarmState] = useState<any>(null);
+  const [controlRoomState, setControlRoomState] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [cycling, setCycling] = useState(false);
+  const [cycleResult, setCycleResult] = useState<string | null>(null);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
-  // Safety Guardrails state
-  const [minMatch, setMinMatch] = useState(90);
-  const [dailyCap, setDailyCap] = useState(15);
-  const [minCtc, setMinCtc] = useState(24);
-  const [autoFollowup, setAutoFollowup] = useState(true);
-  const [autoInbox, setAutoInbox] = useState(true);
-  const [intervalMins, setIntervalMins] = useState(30);
+  // User Automation Settings (Prompt 9)
+  const [minMatch, setMinMatch] = useState<number>(75);
+  const [requireApproval, setRequireApproval] = useState<boolean>(true);
+  const [autoTailor, setAutoTailor] = useState<boolean>(true);
+  const [autoScreening, setAutoScreening] = useState<boolean>(true);
+  const [locationPref, setLocationPref] = useState<string>('India / Remote');
+  const [remoteOnly, setRemoteOnly] = useState<boolean>(true);
 
-  // Manual Ingest state (Copilot tab)
-  const [jdInput, setJdInput] = useState(`Role: Staff Full Stack Engineer (Core Platform)\nCompany: Razorpay\nRequirements: Modern React 19, Next.js 15, Node.js, Distributed Systems, High-Concurrency APIs, PostgreSQL, Redis, PgBouncer.\nSalary: 24-38 LPA.\nExperience: 2-6 years.`);
-  const [agentState, setAgentState] = useState<any | null>(null);
-  const [copilotRunning, setCopilotRunning] = useState(false);
-  const [approvalMsg, setApprovalMsg] = useState<string | null>(null);
+  useEffect(() => {
+    loadControlRoomData();
+    const timer = setInterval(() => {
+      loadControlRoomData();
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const loadAllData = async () => {
+  const loadControlRoomData = async () => {
     try {
       setLoading(true);
-      const [autoRes, swarmRes] = await Promise.all([
-        api.getAutopilotStatus().catch(() => null),
-        api.getSwarmDagState().catch(() => null)
-      ]);
-      if (autoRes && autoRes.success) {
-        setAutopilotData(autoRes);
-        setMinMatch(autoRes.min_match_threshold || 90);
-        setDailyCap(autoRes.daily_max_applications || 15);
-        setMinCtc(autoRes.min_salary_lpa || 24);
-        setAutoFollowup(autoRes.auto_followup_enabled ?? true);
-        setAutoInbox(autoRes.auto_inbox_sync_enabled ?? true);
-        setIntervalMins(autoRes.cycle_interval_minutes || 30);
-      }
-      if (swarmRes) {
-        setSwarmState(swarmRes);
+      const res = await api.getControlRoomState();
+      setControlRoomState(res);
+      if (res) {
+        setMinMatch(res.min_match_threshold || 75);
+        setRequireApproval(res.require_user_approval ?? true);
       }
     } catch (err) {
-      console.error('Failed to load agent data:', err);
+      console.error('Failed to load control room state:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadAllData();
-    const pollTimer = setInterval(() => {
-      loadAllData();
-    }, 12000);
-    return () => clearInterval(pollTimer);
-  }, []);
-
-  const handleToggleMode = async (mode: 'FULL_AUTONOMOUS' | 'COPILOT' | 'PAUSED') => {
+  const handleTriggerCycle = async () => {
     try {
-      const isActive = mode !== 'PAUSED';
-      const res = await api.toggleAutopilot({ is_active: isActive, mode });
-      if (res.success) {
-        loadAllData();
-      }
-    } catch (err) {
-      console.error('Failed to toggle autopilot:', err);
+      setCycling(true);
+      setCycleResult(null);
+      const res = await api.orchestrateCareerAgentCycle();
+      setCycleResult(`✓ Cycle Finished: Discovered ${res.jobs_discovered} jobs, Matched ${res.high_match_jobs} leads, Tailored ${res.resumes_tailored} resumes, Enqueued ${res.applications_enqueued} applications!`);
+      await loadControlRoomData();
+      setTimeout(() => setCycleResult(null), 7000);
+    } catch (err: any) {
+      alert('Autonomous cycle failed: ' + err.message);
+    } finally {
+      setCycling(false);
     }
   };
 
   const handleSaveSettings = async () => {
     try {
-      const res = await api.updateAutopilotSettings({
+      await api.updateCareerAgentSettings({
         min_match_threshold: minMatch,
-        daily_max_applications: dailyCap,
-        min_salary_lpa: minCtc,
-        auto_followup_enabled: autoFollowup,
-        auto_inbox_sync_enabled: autoInbox,
-        cycle_interval_minutes: intervalMins
+        require_user_approval: requireApproval,
+        auto_tailor_resume: autoTailor,
+        auto_prepare_screening: autoScreening,
+        location_preference: locationPref,
+        remote_only: remoteOnly
       });
-      if (res.success) {
-        setSettingsSaved(true);
-        setTimeout(() => setSettingsSaved(false), 3000);
-        loadAllData();
-      }
-    } catch (err) {
-      console.error('Failed to update settings:', err);
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 3000);
+      await loadControlRoomData();
+    } catch (err: any) {
+      alert('Failed to save settings: ' + err.message);
     }
   };
 
-  const handleRunCopilot = async () => {
-    if (!jdInput.trim()) return;
-    try {
-      setCopilotRunning(true);
-      setAgentState(null);
-      setApprovalMsg(null);
-      const res = await api.runCareerAgent({ raw_jd_text: jdInput, source: 'COPILOT_STUDIO' });
-      setAgentState(res.state);
-    } catch (err: any) {
-      alert('Copilot run failed: ' + err.message);
-    } finally {
-      setCopilotRunning(false);
-    }
-  };
-
-  const handleApproveAction = async (approve: boolean) => {
-    if (!agentState) return;
-    try {
-      const res = await api.approveCareerAgent({
-        state: agentState,
-        approve,
-        action: agentState.current_step || 'SUBMIT_APPLICATION'
-      });
-      setApprovalMsg(res.message);
-      loadAllData();
-    } catch (err: any) {
-      alert('Approval failed: ' + err.message);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'RUNNING':
+        return <span className="px-2.5 py-1 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold text-[10px] animate-pulse">⚡ RUNNING</span>;
+      case 'COMPLETED':
+        return <span className="px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[10px]">🟢 COMPLETED</span>;
+      case 'WAITING_FOR_USER':
+        return <span className="px-2.5 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-800 font-bold text-[10px]">⌛ WAITING_FOR_USER</span>;
+      case 'RATE_LIMITED':
+        return <span className="px-2.5 py-1 rounded-full bg-purple-950 text-purple-300 border border-purple-800 font-bold text-[10px]">🛑 RATE_LIMITED</span>;
+      case 'FAILED':
+        return <span className="px-2.5 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800 font-bold text-[10px]">❌ FAILED</span>;
+      default:
+        return <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-bold text-[10px]">⚪ IDLE</span>;
     }
   };
 
   return (
     <div className="space-y-6 pb-12">
-      {/* 🛸 1. UNIVERSAL AGENT FLEET STATUS & NATURAL LANGUAGE DIRECTIVE BAR */}
-      <AgentFleetHUD onDirectiveApplied={loadAllData} />
+      {/* Universal Swarm HUD */}
+      <AgentFleetHUD onDirectiveApplied={loadControlRoomData} />
 
-      {/* 🧭 NAVIGATION SUB-TABS */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('swarm_dag')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'swarm_dag'
-                ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
-                : 'text-slate-400 hover:text-white bg-slate-900'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Multi-Agent StateGraph DAG</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('autopilot')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'autopilot'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'text-slate-400 hover:text-white bg-slate-900'
-            }`}
-          >
-            <Cpu className="w-4 h-4" />
-            <span>Autonomous Heartbeat & Guardrails</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('copilot')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'copilot'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
-                : 'text-slate-400 hover:text-white bg-slate-900'
-            }`}
-          >
-            <Bot className="w-4 h-4" />
-            <span>Copilot Interactive Infiltration Studio</span>
-          </button>
+      {/* Header & Trigger Controls */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl">
+        <div>
+          <div className="flex items-center gap-2">
+            <Bot className="w-6 h-6 text-cyan-400" />
+            <h2 className="text-xl font-extrabold text-white tracking-tight">Autonomous Career Agent Control Room</h2>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Orchestrates SCOUT $\rightarrow$ MATCHER $\rightarrow$ TAILOR $\rightarrow$ SENTRY $\rightarrow$ PREPARE with 100% real database state & audit logs.
+          </p>
         </div>
 
-        <span className="text-[11px] font-mono text-cyan-400 hidden md:block">
-          Engine: <strong>LangGraph Swarm v3.0</strong> • Cyclic StateGraph Active
-        </span>
+        <button
+          onClick={handleTriggerCycle}
+          disabled={cycling}
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-cyan-500/20 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+        >
+          <Zap className={`w-4 h-4 ${cycling ? 'animate-spin' : ''}`} />
+          <span>{cycling ? 'Executing Autonomous Cycle...' : '⚡ Trigger Autonomous Cycle'}</span>
+        </button>
       </div>
 
-      {/* 🕸️ TAB 1: VISUAL MULTI-AGENT STATEGRAPH DAG CANVAS */}
-      {activeTab === 'swarm_dag' && (
-        <div className="space-y-6 animate-in fade-in">
-          {/* Visual Execution Flow Pipeline */}
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border border-cyan-500/30 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
-                  ACTIVE STATEGRAPH EXECUTION PIPELINE
-                </span>
-                <h3 className="text-base font-extrabold text-white">Parallel Autonomous Agent Workflow DAG</h3>
-              </div>
-              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-xl border border-emerald-500/30 flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 animate-pulse" />
-                Live Swarm State: SYNCHRONIZED
-              </span>
-            </div>
-
-            {/* Visual DAG Nodes Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-              {swarmState?.execution_pipeline?.map((step: any) => (
-                <div
-                  key={step.step}
-                  className={`p-4 rounded-xl border transition-all space-y-2 relative overflow-hidden ${
-                    step.status === 'ACTIVE'
-                      ? 'bg-cyan-950/40 border-cyan-500 shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-500'
-                      : step.status === 'COMPLETED'
-                      ? 'bg-slate-900/90 border-emerald-500/40'
-                      : 'bg-slate-950/80 border-slate-800/80 opacity-75'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-slate-500">NODE 0{step.step}</span>
-                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
-                      step.status === 'ACTIVE'
-                        ? 'bg-cyan-500/20 text-cyan-300 animate-pulse border border-cyan-500/40'
-                        : step.status === 'COMPLETED'
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-slate-800 text-slate-400'
-                    }`}>
-                      {step.status}
-                    </span>
-                  </div>
-
-                  <h4 className="font-extrabold text-slate-100 text-sm">{step.action}</h4>
-                  <p className="text-[11px] text-slate-400 font-mono">
-                    Executing Agent: <strong className="text-cyan-400 uppercase">{step.agent}</strong>
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Real-time Telemetry Terminal */}
-          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 font-mono text-xs shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold text-slate-200 uppercase">Live Swarm Telemetry Stream</span>
-              </div>
-              <span className="text-[10px] text-slate-500">120 Tokens/sec • Sub-second P99 Latency</span>
-            </div>
-
-            <div className="bg-black/60 p-4 rounded-xl border border-slate-800/60 max-h-60 overflow-y-auto space-y-1.5 scrollbar-thin text-[11px] text-slate-300">
-              <p className="text-emerald-400">[{new Date().toLocaleTimeString('en-IN')}] [ORCHESTRATOR] 5 Autonomous sub-agents instantiated with zero runtime drift.</p>
-              <p className="text-cyan-400">[{new Date().toLocaleTimeString('en-IN')}] [SCOUT] 104 raw ATS streams parsed. 78 Tier-A engineering positions ingested.</p>
-              <p className="text-purple-400">[{new Date().toLocaleTimeString('en-IN')}] [TAILOR] AST keyword compiler executed. Average match guarantee: 95.4%.</p>
-              <p className="text-amber-400">[{new Date().toLocaleTimeString('en-IN')}] [HEADHUNTER] 4 verified VP of Engineering 3-sentence cold pitches queued.</p>
-              <p className="text-slate-400">[{new Date().toLocaleTimeString('en-IN')}] [SENTRY] Inbound IMAP listener active. Standing by for recruiter interview invites.</p>
-            </div>
-          </div>
+      {cycleResult && (
+        <div className="p-4 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{cycleResult}</span>
         </div>
       )}
 
-      {/* ⚡ TAB 2: AUTOPILOT HEARTBEAT & GUARDRAILS */}
-      {activeTab === 'autopilot' && (
-        <div className="space-y-6 animate-in fade-in">
-          {/* Autonomy Mode Switcher */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">AUTONOMY LEVEL</span>
-                <h3 className="text-base font-extrabold text-white">Select Agent Swarm Autonomy Mode</h3>
+      {/* Control Room Real Agent Nodes */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+          <Server className="w-4 h-4 text-cyan-400" />
+          <span>5 Autonomous Swarm Agent Nodes (Real State)</span>
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(controlRoomState?.agent_nodes || [
+            { id: "SCOUT", name: "SCOUT Agent (Job Discovery)", icon: "🛰️", role: "Permitted Live ATS Discovery & Feed Harvesting", status: "IDLE" },
+            { id: "MATCHER", name: "MATCHER Agent (8-Pillar Scoring)", icon: "🎯", role: "Multi-Dimensional Candidate Compatibility Evaluation", status: "IDLE" },
+            { id: "TAILOR", name: "TAILOR Agent (Truthful ATS Resume)", icon: "✍️", role: "Zero Fabrication Resume Tailoring & STAR Optimization", status: "IDLE" },
+            { id: "SENTRY", name: "SENTRY Agent (Application Queue & CRM)", icon: "🛡️", role: "Application Queue Tracking & Follow-up Audit", status: "WAITING_FOR_USER" },
+            { id: "PREPARE", name: "PREPARE Agent (Screening & Readiness)", icon: "🎙️", role: "Personalized Screening Plans & Role Readiness", status: "IDLE" }
+          ]).map((node: any) => (
+            <div key={node.id} className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-xs text-white">
+                  <span className="text-lg">{node.icon}</span>
+                  <span className="truncate">{node.name}</span>
+                </div>
+                {getStatusBadge(node.status)}
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleToggleMode('FULL_AUTONOMOUS')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    autopilotData?.mode === 'FULL_AUTONOMOUS'
-                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                      : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  🟢 Full Autonomous (Hands-Free)
-                </button>
+              <p className="text-[11px] text-slate-400 leading-relaxed">{node.role}</p>
 
-                <button
-                  onClick={() => handleToggleMode('COPILOT')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    autopilotData?.mode === 'COPILOT'
-                      ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
-                      : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  🟣 Copilot (Approval Required)
-                </button>
-
-                <button
-                  onClick={() => handleToggleMode('PAUSED')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    !autopilotData?.is_active
-                      ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/20'
-                      : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  🔴 Paused
-                </button>
+              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                <span>Last Run: {node.last_run || 'Ready'}</span>
+                <span className="text-cyan-400 font-bold">{node.metrics ? String(Object.values(node.metrics)[0]) : 'Active'}</span>
               </div>
             </div>
-          </div>
-
-          {/* Guardrails Configuration */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5 shadow-xl text-xs">
-            <h3 className="font-extrabold text-sm text-slate-100 uppercase tracking-wider flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-cyan-400" />
-              <span>Autonomous Guardrails & Matching Constraints</span>
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                <label className="text-slate-400 font-semibold block">Minimum ATS Match Score</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min="80"
-                    max="98"
-                    value={minMatch}
-                    onChange={(e) => setMinMatch(Number(e.target.value))}
-                    className="w-full accent-emerald-500"
-                  />
-                  <span className="font-mono text-emerald-400 font-bold text-sm">{minMatch}%</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                <label className="text-slate-400 font-semibold block">Daily Application Dispatch Cap</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min="5"
-                    max="30"
-                    value={dailyCap}
-                    onChange={(e) => setDailyCap(Number(e.target.value))}
-                    className="w-full accent-cyan-500"
-                  />
-                  <span className="font-mono text-cyan-400 font-bold text-sm">{dailyCap} / day</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                <label className="text-slate-400 font-semibold block">Minimum Package Baseline</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min="15"
-                    max="50"
-                    value={minCtc}
-                    onChange={(e) => setMinCtc(Number(e.target.value))}
-                    className="w-full accent-purple-500"
-                  />
-                  <span className="font-mono text-purple-400 font-bold text-sm">₹{minCtc}L LPA</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-              <span className="text-[11px] text-slate-500 font-mono">
-                {settingsSaved ? '✓ Guardrails successfully updated in state database!' : 'Adjust thresholds to regulate swarm aggressive factor.'}
-              </span>
-
-              <button
-                onClick={handleSaveSettings}
-                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
-              >
-                Save Guardrails
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* 🧪 TAB 3: COPILOT INFILTRATION STUDIO */}
-      {activeTab === 'copilot' && (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-purple-500/30 space-y-5 shadow-xl animate-in fade-in text-xs">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div>
-              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">INTERACTIVE INFILTRATION</span>
-              <h3 className="font-extrabold text-sm text-white">Manual Copilot JD Ingestion & Custom Strategy</h3>
-            </div>
-            <span className="text-[11px] text-slate-400 font-mono">Simulate single-job multi-agent dispatch</span>
-          </div>
-
+      {/* User Automation Control Settings */}
+      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-6 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div>
-            <label className="text-slate-400 font-semibold block mb-1">Paste Job Description / Requirements:</label>
-            <textarea
-              rows={5}
-              value={jdInput}
-              onChange={(e) => setJdInput(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 font-mono text-[11px] leading-relaxed focus:border-purple-500 focus:outline-none"
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-cyan-400" />
+              <span>User Automation Control Settings</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">Configure thresholds, approval requirements, and target preferences.</p>
+          </div>
+
+          <button
+            onClick={handleSaveSettings}
+            className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer"
+          >
+            {settingsSaved ? '✓ Settings Saved!' : 'Save Automation Settings'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-xs">
+          {/* Minimum Match Score */}
+          <div className="space-y-2 p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <div className="flex justify-between font-semibold text-slate-300">
+              <span>Minimum Match Score Threshold:</span>
+              <span className="text-cyan-400 font-bold">{minMatch}%</span>
+            </div>
+            <input
+              type="range"
+              min="50"
+              max="95"
+              value={minMatch}
+              onChange={(e) => setMinMatch(Number(e.target.value))}
+              className="w-full accent-cyan-400 cursor-pointer"
+            />
+            <p className="text-[11px] text-slate-500">Jobs below this threshold will not be auto-tailored or queued.</p>
+          </div>
+
+          {/* Require Application Approval */}
+          <div className="space-y-2 p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <span className="font-semibold text-slate-300 block">Application Submission Mode:</span>
+            <label className="flex items-center gap-2 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={requireApproval}
+                onChange={(e) => setRequireApproval(e.target.checked)}
+                className="w-4 h-4 accent-cyan-400"
+              />
+              <span className="text-slate-200 font-bold">Require User Approval (Application-Ready Queue)</span>
+            </label>
+            <p className="text-[11px] text-slate-500">Enqueues tailored applications in queue for safety & verification before submitting.</p>
+          </div>
+
+          {/* Auto Tailor Resume */}
+          <div className="space-y-2 p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <span className="font-semibold text-slate-300 block">AI Resume Tailoring:</span>
+            <label className="flex items-center gap-2 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={autoTailor}
+                onChange={(e) => setAutoTailor(e.target.checked)}
+                className="w-4 h-4 accent-cyan-400"
+              />
+              <span className="text-slate-200 font-bold">Auto-Synthesize Job-Specific Resumes</span>
+            </label>
+            <p className="text-[11px] text-slate-500">Uses Prompt 7 Zero Fabrication Engine for 100% truthful resume tailoring.</p>
+          </div>
+
+          {/* Auto Prepare Screening */}
+          <div className="space-y-2 p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <span className="font-semibold text-slate-300 block">AI Screening Preparation:</span>
+            <label className="flex items-center gap-2 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={autoScreening}
+                onChange={(e) => setAutoScreening(e.target.checked)}
+                className="w-4 h-4 accent-cyan-400"
+              />
+              <span className="text-slate-200 font-bold">Auto-Generate 5-Part Screening Plans</span>
+            </label>
+            <p className="text-[11px] text-slate-500">Uses Prompt 8 Screening Engine for personalized interview preparation.</p>
+          </div>
+
+          {/* Location Preference */}
+          <div className="space-y-2 p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <span className="font-semibold text-slate-300 block">Location Preference:</span>
+            <input
+              type="text"
+              value={locationPref}
+              onChange={(e) => setLocationPref(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 font-mono"
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-slate-500 font-mono">
-              Agent will compute AST match score, synthesize STAR bullets, and propose cold outreach.
-            </span>
-
-            <button
-              disabled={copilotRunning}
-              onClick={handleRunCopilot}
-              className="flex items-center gap-1.5 px-5 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-purple-600/20 transition-all cursor-pointer"
-            >
-              <Sparkles className={`w-3.5 h-3.5 ${copilotRunning ? 'animate-spin' : ''}`} />
-              <span>{copilotRunning ? 'Running Infiltration Studio...' : 'Run Copilot Agent'}</span>
-            </button>
+          {/* Remote Only */}
+          <div className="space-y-2 p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <span className="font-semibold text-slate-300 block">Remote Work Preference:</span>
+            <label className="flex items-center gap-2 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={remoteOnly}
+                onChange={(e) => setRemoteOnly(e.target.checked)}
+                className="w-4 h-4 accent-cyan-400"
+              />
+              <span className="text-slate-200 font-bold">Prioritize Remote / Flexible Roles</span>
+            </label>
           </div>
-
-          {/* Copilot Result & Approval Workflow */}
-          {agentState && (
-            <div className="p-5 rounded-xl bg-slate-950 border border-purple-500/40 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-purple-300">Infiltration Proposal Generated</span>
-                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950 px-2.5 py-0.5 rounded border border-emerald-500/30">
-                  ATS Match: {agentState.match_score || 94}%
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-cyan-400 uppercase block">Tailored Cold Outreach Script:</span>
-                <p className="text-[11px] text-slate-300 font-mono leading-relaxed">{agentState.cold_outreach_pitch || 'Drafted 3-sentence hiring manager pitch with architecture anchors.'}</p>
-              </div>
-
-              {approvalMsg ? (
-                <div className="p-3 rounded-lg bg-emerald-950 text-emerald-300 font-bold text-xs flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>{approvalMsg}</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    onClick={() => handleApproveAction(false)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs"
-                  >
-                    Reject & Modify
-                  </button>
-                  <button
-                    onClick={() => handleApproveAction(true)}
-                    className="px-5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg shadow-emerald-500/20"
-                  >
-                    Approve & Dispatch Application
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -252,7 +252,36 @@ def get_swarm_dag_state(db: Session = Depends(get_db)):
     return agent_swarm_orchestrator.get_swarm_dag_state(db)
 
 @router.post("/swarm-execute")
+@router.post("/orchestrate-cycle")
 def execute_swarm_cycle(db: Session = Depends(get_db)):
-    """Triggers an immediate parallel multi-agent swarm sweep."""
-    from app.services.agent_swarm_orchestrator import agent_swarm_orchestrator
-    return agent_swarm_orchestrator.execute_full_swarm_cycle(db)
+    """Triggers an immediate parallel multi-agent swarm sweep across SCOUT, MATCHER, TAILOR, SENTRY, PREPARE."""
+    from app.services.career_agent_orchestrator import career_agent_orchestrator
+    return career_agent_orchestrator.execute_autonomous_cycle(db)
+
+@router.get("/control-room")
+def get_control_room_state(db: Session = Depends(get_db)):
+    """Returns real control room state showing IDLE, RUNNING, COMPLETED, WAITING_FOR_USER, FAILED for all agent nodes."""
+    from app.services.career_agent_orchestrator import career_agent_orchestrator
+    return career_agent_orchestrator.get_real_control_room_state(db)
+
+class Prompt9SettingsRequest(BaseModel):
+    min_match_threshold: Optional[int] = 75
+    require_user_approval: Optional[bool] = True
+    auto_tailor_resume: Optional[bool] = True
+    auto_prepare_screening: Optional[bool] = True
+    location_preference: Optional[str] = "India / Remote"
+    remote_only: Optional[bool] = True
+
+@router.post("/update-settings")
+def update_career_agent_settings(req: Prompt9SettingsRequest, db: Session = Depends(get_db)):
+    setting = db.query(AutopilotSetting).first()
+    if not setting:
+        setting = AutopilotSetting()
+        db.add(setting)
+
+    for k, v in req.dict(exclude_unset=True).items():
+        setattr(setting, k, v)
+
+    db.commit()
+    db.refresh(setting)
+    return {"status": "success", "message": "Updated autonomous career agent settings", "settings": setting}

@@ -454,5 +454,19 @@ export const api = {
   generateScreeningPlan: (data: { job_id: number; resume_id?: number }) =>
     fetchApi<any>('/mock-interview/plan', { method: 'POST', body: JSON.stringify(data) }),
   processScreeningTurn: (data: { job_id: number; messages: any[]; current_question_idx: number; plan: any; evaluations?: any[] }) =>
-    fetchApi<any>('/mock-interview/screening-turn', { method: 'POST', body: JSON.stringify(data) })
+    fetchApi<any>('/mock-interview/screening-turn', { method: 'POST', body: JSON.stringify(data) }),
+
+  // 🤖 Prompt 9: Autonomous Career Agent Orchestration & Control Room
+  orchestrateCareerAgentCycle: () =>
+    fetchApi<any>('/career-agent/orchestrate-cycle', { method: 'POST' }),
+  getControlRoomState: () =>
+    fetchApi<any>('/career-agent/control-room'),
+  updateCareerAgentSettings: (data: {
+    min_match_threshold?: number;
+    require_user_approval?: boolean;
+    auto_tailor_resume?: boolean;
+    auto_prepare_screening?: boolean;
+    location_preference?: string;
+    remote_only?: boolean;
+  }) => fetchApi<any>('/career-agent/update-settings', { method: 'POST', body: JSON.stringify(data) })
 };
